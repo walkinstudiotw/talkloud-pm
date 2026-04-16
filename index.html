@@ -20,12 +20,12 @@ body{display:flex;flex-direction:column}
 .nav-actions{display:flex;gap:6px;align-items:center;margin-left:auto}
 .nav-btn{padding:5px 12px;border-radius:7px;border:1px solid #333;background:#1a1a1a;color:#888;cursor:pointer;font-size:.75rem;font-family:inherit;transition:all .15s;white-space:nowrap}
 .nav-btn:hover{border-color:#aaa;color:#ccc;background:#222}
-.nav-btn.primary{background:#1a1a1a;border-color:#aaaaaa;color:#aaaaaa;font-weight:700}
-.nav-btn.primary:hover{background:#262626;color:#fff;border-color:#aaaaaa}
-.nav-btn.import-btn{background:#1a2030;border-color:#5b9bd5;color:#7ab8e8}
-.nav-btn.import-btn:hover{background:#1e3050;border-color:#7ab8e8;color:#a8d4f8}
-.nav-btn.export-btn{background:#2a1e10;border-color:#c8843a;color:#e8a855}
-.nav-btn.export-btn:hover{background:#3a2a14;border-color:#e8a855;color:#f8c878}
+.nav-btn.primary{background:#0c2016;border-color:#1e6038;color:#4dd87a;font-weight:700}
+.nav-btn.primary:hover{background:#0f2a1c;color:#7de89a;border-color:#4dd87a}
+.nav-btn.import-btn{background:#0a1828;border-color:#1e4a80;color:#5a9ae0}
+.nav-btn.import-btn:hover{background:#0e2040;border-color:#5a9ae0;color:#8ab8f0}
+.nav-btn.export-btn{background:#2a1800;border-color:#6a3e00;color:#f0a030}
+.nav-btn.export-btn:hover{background:#382200;border-color:#f0a030;color:#f8c060}
 .tab-panel{display:none;flex:1;overflow-y:auto;flex-direction:column}
 .tab-panel.active{display:flex}
 .filter-bar{background:#111111;border-bottom:1px solid #2a2a2a;padding:7px 16px;display:flex;align-items:center;gap:7px;flex-shrink:0;flex-wrap:wrap}
@@ -82,8 +82,18 @@ body{display:flex;flex-direction:column}
 .ep-num{color:#ffffff!important}
 .filter-pill.active{background:#2a2a2a!important;color:#ffffff!important;border-color:#555555!important}
 .filter-pill:hover{border-color:#888888!important;color:#cccccc!important}
-.nav-btn.primary{background:#1a1a1a!important;border-color:#555555!important;color:#ffffff!important}
-.nav-btn.primary:hover{background:#2a2a2a!important;color:#ffffff!important}
+/* 狀態篩選 pill 顏色對齊 badge */
+.filter-pill[data-sf="confirmed"]{color:#4dd87a;border-color:#1e6038}
+.filter-pill[data-sf="confirmed"]:hover{color:#7de89a!important;border-color:#4dd87a!important}
+.filter-pill[data-sf="confirmed"].active{background:#0c2016!important;color:#4dd87a!important;border-color:#1e6038!important}
+.filter-pill[data-sf="pending"]{color:#f0a030;border-color:#6a3e00}
+.filter-pill[data-sf="pending"]:hover{color:#f8c060!important;border-color:#f0a030!important}
+.filter-pill[data-sf="pending"].active{background:#2a1800!important;color:#f0a030!important;border-color:#6a3e00!important}
+.filter-pill[data-sf="inviting"]{color:#5a9ae0;border-color:#1e4a80}
+.filter-pill[data-sf="inviting"]:hover{color:#8ab8f0!important;border-color:#5a9ae0!important}
+.filter-pill[data-sf="inviting"].active{background:#0a1828!important;color:#5a9ae0!important;border-color:#1e4a80!important}
+.nav-btn.primary{background:#0c2016!important;border-color:#1e6038!important;color:#4dd87a!important}
+.nav-btn.primary:hover{background:#0f2a1c!important;color:#7de89a!important;border-color:#4dd87a!important}
 .sched-table thead th{color:#aaaaaa!important}
 .date-cell{color:#cccccc!important}
 /* ── GUEST BADGE COLOURS ── */
