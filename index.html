@@ -1117,7 +1117,7 @@ function renderCal(){
       <div class="cal-dn">${cur.getDate()}</div>
       ${evs.map(ev=>{
         if(ev.isRec)return`<div class="cal-ev" style="background:#181818;border-color:#444444;color:#d4ffd4" title="${ev.ep.epNumber} 錄音｜${ev.ep.topic||''}"><div class="cal-ev-header"><span class="cal-ev-ep">${ev.ep.epNumber}</span><span class="cal-ev-task">🎙 錄音</span></div><div class="cal-ev-topic">${ev.ep.topic||''}</div></div>`;
-        if(ev.isYt)return`<div class="cal-ev" style="background:#2a1e00;border-color:#f1c40f;color:#fff8d4" title="${ev.ep.epNumber} 上架｜${ev.ep.topic||''}"><div class="cal-ev-header"><span class="cal-ev-ep">${ev.ep.epNumber}</span><span class="cal-ev-task">📺 上架</span></div><div class="cal-ev-topic">${ev.ep.topic||''}</div></div>`;
+        if(ev.isYt)return`<div class="cal-ev" style="background:#2a1e00;border-color:#f1c40f;color:#fff8d4" title="${ev.ep.epNumber} 播出｜${ev.ep.topic||''}"><div class="cal-ev-header"><span class="cal-ev-ep">${ev.ep.epNumber}</span><span class="cal-ev-task">📺 播出</span></div><div class="cal-ev-topic">${ev.ep.topic||''}</div></div>`;
         const st=STAGES[ev.p.stage];const c=st.color;const done=!!ev.p.done;
         const tp=ev.ep?.topic||'';
         return`<div class="cal-ev ${done?'done':''}" style="background:${c}22;border-color:${c};color:${c}" onclick="calEditPP(event,'${ev.p.id}')" title="${ev.ep?.epNumber} ${st.label}｜${tp}（點擊調整）"><div class="cal-ev-header"><span class="cal-ev-ep">${ev.ep?.epNumber||''}</span><span class="cal-ev-task">${st.label}</span></div><div class="cal-ev-topic">${tp}</div></div>`;
