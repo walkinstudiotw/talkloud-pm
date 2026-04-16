@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>就你意見最多 — 製作管理</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Noto Sans TC',sans-serif;background:#0a0a0a;color:#ddeedd;overflow:hidden}
+body{display:flex;flex-direction:column}
+.navbar{background:#161616;border-bottom:1px solid #2a2a2a;padding:0 16px;display:flex;align-items:center;height:48px;gap:0;flex-shrink:0}
+.nav-brand{font-weight:700;color:#8ec4a8;font-size:.95rem;white-space:nowrap;margin-right:20px;letter-spacing:.3px}
+.nav-tabs{display:flex;gap:0;flex:1}
+.nav-tab{padding:0 14px;height:48px;display:flex;align-items:center;font-size:.8rem;color:#6a8a6a;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;user-select:none}
+.nav-tab:hover{color:#a8d4a8}
+.nav-tab.active{color:#8ec4a8;border-bottom-color:#8ec4a8}
+.nav-actions{display:flex;gap:6px;align-items:center;margin-left:auto}
+.nav-btn{padding:5px 12px;border-radius:7px;border:1px solid #333;background:#1a1a1a;color:#888;cursor:pointer;font-size:.75rem;font-family:inherit;transition:all .15s;white-space:nowrap}
+.nav-btn:hover{border-color:#aaa;color:#ccc;background:#222}
+.nav-btn.primary{background:#1e3028;border-color:#8ec4a8;color:#8ec4a8;font-weight:700}
+.nav-btn.primary:hover{background:#3d6b52;color:#fff;border-color:#8ec4a8}
+.nav-btn.import-btn{background:#1a2030;border-color:#5b9bd5;color:#7ab8e8}
+.nav-btn.import-btn:hover{background:#1e3050;border-color:#7ab8e8;color:#a8d4f8}
+.nav-btn.export-btn{background:#2a1e10;border-color:#c8843a;color:#e8a855}
+.nav-btn.export-btn:hover{background:#3a2a14;border-color:#e8a855;color:#f8c878}
+.tab-panel{display:none;flex:1;overflow-y:auto;flex-direction:column}
+.tab-panel.active{display:flex}
+.filter-bar{background:#111111;border-bottom:1px solid #2a2a2a;padding:7px 16px;display:flex;align-items:center;gap:7px;flex-shrink:0;flex-wrap:wrap}
+.filter-pill{padding:3px 10px;border-radius:12px;border:1px solid #2a2a2a;background:transparent;color:#6a8a6a;cursor:pointer;font-size:.72rem;font-family:inherit;transition:all .15s}
+.filter-pill:hover{border-color:#8ec4a8;color:#8ec4a8}
+.filter-pill.active{background:#3d6b52;color:#ddeedd;border-color:#8ec4a8;font-weight:700}
+.filter-sep{width:1px;height:18px;background:#2a2a2a;flex-shrink:0}
+.filter-search{background:#161616;border:1px solid #2a2a2a;border-radius:7px;padding:4px 10px;color:#ddeedd;font-size:.78rem;font-family:inherit;outline:none;width:160px}
+.filter-search:focus{border-color:#8ec4a8}
+.filter-label{font-size:.72rem;color:#4a6a4a}
+.scroll-body{flex:1;overflow-y:auto;overflow-x:auto}
+.scroll-body::-webkit-scrollbar{width:5px;height:5px}
+.scroll-body::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+/* SCHEDULE TABLE */
+.sched-table{width:100%;border-collapse:collapse;min-width:900px}
+.sched-table thead th{background:#111111;padding:7px 10px;font-size:.67rem;color:#4a6a4a;font-weight:700;text-align:left;border-bottom:1px solid #2a2a2a;position:sticky;top:0;z-index:10;white-space:nowrap;text-transform:uppercase;letter-spacing:.4px}
+.sched-table tbody tr{border-bottom:1px solid #111111;transition:background .1s;cursor:pointer}
+.sched-table tbody tr:hover{background:#1a2a1e}
+.sched-table td{padding:6px 10px;font-size:.8rem;vertical-align:middle}
+.ep-num{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#8ec4a8;font-weight:700}
+.date-cell{font-size:.75rem;color:#a8c4a8;white-space:nowrap}
+.countdown{display:inline-block;padding:1px 6px;border-radius:8px;font-size:.6rem;font-weight:700;margin-left:4px;font-family:'JetBrains Mono',monospace}
+.countdown.urgent{background:#4a1a1a;color:#e74c3c}
+.countdown.soon{background:#3a2a10;color:#f39c12}
+.countdown.ok{background:#181818;color:#8ec4a8}
+.countdown.past{background:#111;color:#445544}
+.check-toggle{width:15px;height:15px;accent-color:#8ec4a8;cursor:pointer}
+.guest-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.67rem;font-weight:700;white-space:nowrap}
+.guest-badge.confirmed{background:#181818;color:#8ec4a8;border:1px solid #2a2a2a}
+.guest-badge.pending{background:#3a2a10;color:#f39c12;border:1px solid #5a4010}
+.guest-badge.inviting{background:#1a1a2a;color:#3498db;border:1px solid #2a4a6a}
+.guest-badge.empty{background:#1a2e1a;color:#4a6a4a;border:1px solid #2a3a2a}
+.cell-text{cursor:text;padding:2px 4px;border-radius:4px;display:block;min-height:22px;line-height:1.4;color:#d0e4d0}
+.cell-text:hover{background:#1c1c1c}
+.cell-text.empty{color:#3a5a3a;font-style:italic;font-size:.72rem}
+.cell-input{width:100%;background:#1c1c1c;border:1px solid #5c8c72;border-radius:4px;padding:3px 6px;color:#ddeedd;font-size:.8rem;font-family:inherit;outline:none}
+.link-icon{color:#3498db;text-decoration:none;font-size:.85rem}
+.link-icon:hover{color:#5ab8fb}
+.act-btn{background:none;border:none;cursor:pointer;color:#3a5a3a;font-size:.8rem;padding:2px 5px;border-radius:4px;transition:all .15s}
+.act-btn:hover.del{color:#e74c3c;background:#2a1010}
+.act-btn:hover{color:#8ec4a8;background:#181818}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:12px;color:#3a5a3a}
+.tbd-badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:.65rem;font-weight:700;background:#2a2020;color:#888;border:1px solid #3a3a3a;font-family:'JetBrains Mono',monospace}
+.empty-icon{font-size:3rem}
+.empty-title{font-size:1rem;font-weight:700;color:#4a6a4a}
+/* GANTT */
+.gantt-outer{flex:1;overflow:auto;position:relative}
+.gantt-outer::-webkit-scrollbar{width:5px;height:5px}
+.gantt-outer::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+.gantt-grid{display:grid;position:relative}
+.gantt-corner{background:#111111;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;padding:6px 10px;font-size:.65rem;color:#4a6a4a;font-weight:700;text-transform:uppercase;letter-spacing:.4px;position:sticky;left:0;top:0;z-index:15}
+.gantt-week-hdr{padding:5px 4px;background:#111111;border-bottom:1px solid #2a2a2a;border-right:1px solid #2a2a2a;font-size:.65rem;color:#4a6a4a;font-weight:700;text-align:center;position:sticky;top:0;z-index:8}
+.gantt-day-hdr{padding:3px 0;text-align:center;border-bottom:1px solid #2a2a2a;border-right:1px solid #111111;font-size:.6rem;position:sticky;top:26px;z-index:7;background:#0a0a0a}
+.gantt-day-hdr .dn{font-family:'JetBrains Mono',monospace;font-size:.72rem;display:block}
+.gantt-day-hdr .dw{font-size:.56rem;color:#4a6a4a}
+.gantt-day-hdr.today-hdr{background:#181818;color:#8ec4a8}
+.gantt-day-hdr.weekend-hdr{background:#0d1610;color:#3a5a3a}
+.gantt-ep-lbl{background:#111111;border-right:1px solid #2a2a2a;border-bottom:1px solid #0a0a0a;padding:0 8px;display:flex;align-items:center;position:sticky;left:0;z-index:4;height:28px;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#8ec4a8;font-weight:700;white-space:nowrap;gap:4px}
+.gantt-ep-lbl small{font-size:.58rem;color:#4a6a4a;font-family:'Noto Sans TC',sans-serif;font-weight:400;overflow:hidden;text-overflow:ellipsis;max-width:90px}
+.gantt-cell{border-bottom:1px solid #0a0a0a;border-right:1px solid #0a0a0a;min-width:32px;height:28px;position:relative}
+.gantt-cell.wknd{background:#0d1610}
+.gantt-cell.today-c{background:#181818}
+.gantt-bar{position:absolute;top:4px;left:1px;right:1px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:700;cursor:pointer;z-index:2;overflow:hidden;transition:filter .15s}
+.gantt-bar:hover{filter:brightness(1.3)}
+.gantt-bar.rec{background:#1e3428;border:1px solid #5c8c72;color:#d4ffd4}
+.gantt-bar.yt{background:#5a3d00;border:1px solid #f1c40f;color:#fff8d4}
+.gantt-bar.v1{background:#4a2a0a;border:1px solid #e67e22;color:#ffd4b0}
+.gantt-bar.ol{background:#2a1050;border:1px solid #c084fc;color:#f0d4ff}
+.gantt-bar.cp{background:#1a0a3a;border:1px solid #7c3aed;color:#d4c4ff}
+.gantt-bar.cv{background:#3d0a2a;border:1px solid #e91e63;color:#ffd4e8}
+.gantt-bar.v2{background:#0a2a4a;border:1px solid #3498db;color:#d4e8ff}
+.today-vline{position:absolute;top:0;bottom:0;width:2px;background:#e74c3c;z-index:20;pointer-events:none}
+.today-vline::before{content:'今';position:absolute;top:0;left:3px;font-size:.55rem;color:#e74c3c;font-weight:700}
+.gantt-legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:6px 16px;background:#111111;border-top:1px solid #2a2a2a;flex-shrink:0}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.68rem;color:#6a8a6a}
+.legend-dot{width:12px;height:12px;border-radius:3px}
+.gantt-nav-row{display:flex;gap:8px;align-items:center;margin-left:auto}
+.gtoggle-group{display:flex;gap:3px;background:#0a0a0a;border-radius:7px;padding:3px}
+.gtoggle{padding:3px 8px;border-radius:5px;border:none;background:transparent;color:#4a6a4a;font-size:.68rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.gtoggle.on{background:#2a2a2a;color:#8ec4a8}
+/* CALENDAR */
+.cal-nav{display:flex;align-items:center;gap:10px;padding:9px 16px;background:#111111;border-bottom:1px solid #2a2a2a;flex-shrink:0;flex-wrap:wrap}
+.cal-nav-btn{background:none;border:1px solid #2a2a2a;border-radius:6px;color:#6a8a6a;cursor:pointer;font-size:.95rem;padding:2px 10px;transition:all .15s;font-family:inherit}
+.cal-nav-btn:hover{border-color:#8ec4a8;color:#8ec4a8}
+.cal-title{font-weight:700;color:#d0e4d0;font-size:.95rem;min-width:110px;text-align:center}
+.assignee-chips{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto;align-items:center}
+.achip{padding:3px 10px;border-radius:12px;border:2px solid transparent;font-size:.7rem;cursor:pointer;transition:all .15s;font-family:inherit;font-weight:700;opacity:.45}
+.achip.on{opacity:1}
+.cal-wrap{display:flex;flex-direction:column}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cal-dh{background:#111111;padding:5px 0;text-align:center;font-size:.67rem;color:#4a6a4a;font-weight:700;border-bottom:1px solid #2a2a2a;border-right:1px solid #2a2a2a}
+.cal-cell{border-right:1px solid #111111;border-bottom:1px solid #111111;padding:5px;overflow:hidden;min-height:120px;min-width:0}
+.cal-cell:hover{background:#161616}
+.cal-cell.other{opacity:.4;background:#0a120c}
+.cal-cell.today{border:2px solid #4ade80;box-shadow:inset 0 0 0 1px #4ade8060,0 0 8px #4ade8030;background:#0d2016}
+.cal-cell.wknd{background:#0d1610}
+.cal-dn{font-size:.65rem;color:#4a6a4a;font-family:'JetBrains Mono',monospace;margin-bottom:2px}
+.cal-cell.today .cal-dn{color:#8ec4a8;font-weight:700}
+.cal-ev{padding:2px 4px;border-radius:4px;font-size:.6rem;margin-bottom:2px;cursor:pointer;display:flex;flex-direction:column;gap:1px;border:1px solid transparent;transition:filter .15s}
+.cal-ev:hover{filter:brightness(1.2)}
+.cal-ev.done{opacity:.45;text-decoration:line-through}
+.cal-ev-header{display:flex;align-items:center;gap:3px}
+.cal-ev-ep{font-weight:700;flex-shrink:0}
+.cal-ev-task{flex-shrink:0}
+.cal-ev-topic{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.75;font-size:.55rem;line-height:1.2}
+/* CAL PP POPUP */
+#cal-pp-pop{position:fixed;z-index:200;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:8px;padding:12px;min-width:200px;box-shadow:0 8px 24px #000a;display:none;flex-direction:column;gap:8px}
+#cal-pp-pop.show{display:flex}
+.cpp-title{font-size:.75rem;font-weight:700;color:#8ec4a8}
+.cpp-row{display:flex;align-items:center;gap:8px;font-size:.72rem;color:#888}
+.cpp-row label{color:#666;min-width:52px}
+.cpp-row input[type=date]{flex:1;background:#111;border:1px solid #333;border-radius:4px;color:#ccc;padding:3px 6px;font-size:.72rem}
+.cpp-btns{display:flex;gap:6px;margin-top:2px}
+.cpp-btn{flex:1;padding:5px 0;border:none;border-radius:5px;font-size:.7rem;font-weight:700;cursor:pointer}
+.cpp-btn.save{background:#3d6b52;color:#d4ffd4}
+.cpp-btn.save:hover{background:#4a8060}
+.cpp-btn.done-btn{background:#1a2e20;border:1px solid #5c8c72;color:#8ec4a8}
+.cpp-btn.done-btn:hover{background:#22401c}
+.cpp-btn.cancel{background:#222;color:#666;border:1px solid #333}
+.cpp-btn.cancel:hover{background:#2a2a2a}
+/* KANBAN */
+.kanban-wrap{flex:1;display:flex;gap:10px;padding:12px;overflow-x:auto;overflow-y:hidden}
+.kanban-wrap::-webkit-scrollbar{height:5px}
+.kanban-wrap::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+.k-col{flex:0 0 240px;display:flex;flex-direction:column;background:#111111;border:1px solid #2a2a2a;border-radius:10px;overflow:hidden}
+.k-col-accent{height:3px;flex-shrink:0}
+.k-col-hdr{padding:9px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.k-col-title{font-weight:700;font-size:.8rem;flex:1}
+.k-count{background:#161616;border-radius:10px;padding:1px 7px;font-size:.67rem;color:#6a8a6a;font-family:'JetBrains Mono',monospace}
+.k-cards{flex:1;overflow-y:auto;padding:0 8px 8px;display:flex;flex-direction:column;gap:7px}
+.k-cards::-webkit-scrollbar{width:4px}
+.k-cards::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
+.k-card{background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:9px 11px;cursor:pointer;transition:all .15s}
+.k-card:hover{border-color:#8ec4a8;transform:translateY(-1px)}
+.k-card.ov{border-color:#e74c3c}
+.k-ep{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:#8ec4a8;font-weight:700;margin-bottom:2px}
+.k-topic{font-size:.73rem;color:#d0e4d0;line-height:1.4;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.k-guest{font-size:.66rem;color:#6a8a6a;margin-bottom:5px}
+.k-meta{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.k-due{font-size:.6rem;color:#4a6a4a;font-family:'JetBrains Mono',monospace}
+.k-due.ov{color:#e74c3c}
+.k-done-btn{padding:2px 7px;border-radius:5px;border:1px solid #2a2a2a;background:transparent;color:#6a8a6a;font-size:.63rem;font-family:inherit;cursor:pointer;transition:all .15s}
+.k-done-btn:hover{border-color:#8ec4a8;color:#8ec4a8;background:#181818}
+.k-assignee{padding:1px 5px;border-radius:8px;font-size:.58rem;font-weight:700}
+/* DASHBOARD */
+.dash-scroll{flex:1;overflow-y:auto}
+.dash-scroll::-webkit-scrollbar{width:5px}
+.dash-scroll::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+.dash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:14px}
+.memo-wrap{padding:0 14px 14px}
+.memo-label{font-size:.7rem;color:#5c8c72;font-weight:700;letter-spacing:.05em;margin-bottom:6px}
+.memo-area{width:100%;box-sizing:border-box;background:#0e1a10;border:1px solid #1e3020;border-radius:8px;color:#c8d8c8;font-size:.8rem;font-family:inherit;line-height:1.6;padding:10px 12px;resize:vertical;min-height:120px;outline:none;transition:border-color .2s}
+.memo-area:focus{border-color:#2ecc71}
+.memo-saved{font-size:.65rem;color:#4a6a4a;margin-top:4px;height:14px;transition:opacity .4s}
+.dash-card{background:#111111;border:1px solid #2a2a2a;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:9px}
+.dash-title{font-size:.73rem;font-weight:700;color:#6a8a6a;text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:8px}
+.dash-badge{border-radius:10px;padding:1px 8px;font-size:.63rem;font-family:'JetBrains Mono',monospace}
+.dash-badge.ok{background:#181818;color:#8ec4a8}
+.dash-badge.warn{background:#3a2a10;color:#f39c12}
+.dash-badge.danger{background:#3a1010;color:#e74c3c}
+.d-item{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid #161616}
+.d-item:last-child{border-bottom:none}
+.d-ep{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#8ec4a8;font-weight:700;flex-shrink:0;width:38px}
+.d-info{flex:1;min-width:0}
+.d-main{font-size:.77rem;color:#d0e4d0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-sub{font-size:.63rem;color:#4a6a4a;margin-top:1px}
+.d-right{flex-shrink:0;font-size:.68rem}
+.dash-empty{font-size:.75rem;color:#3a5a3a;text-align:center;padding:14px 0}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat-box{background:#161616;border-radius:8px;padding:10px;text-align:center}
+.stat-num{font-size:1.6rem;font-weight:700;color:#8ec4a8;font-family:'JetBrains Mono',monospace}
+.stat-lbl{font-size:.63rem;color:#4a6a4a;margin-top:2px}
+.prog-wrap{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.prog-row{display:flex;align-items:center;gap:8px;font-size:.7rem}
+.prog-lbl{width:80px;color:#6a8a6a;flex-shrink:0}
+.prog-track{flex:1;background:#161616;border-radius:4px;height:6px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;transition:width .4s}
+.prog-pct{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#6a8a6a;width:36px;text-align:right}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal-overlay.open{display:flex}
+.modal{background:#161616;border:1px solid #2a2a2a;border-radius:12px;padding:20px;width:500px;max-width:94vw;max-height:90vh;display:flex;flex-direction:column;gap:11px;overflow-y:auto}
+.modal::-webkit-scrollbar{width:4px}
+.modal::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}
+.modal-lg{width:680px}
+.modal-title{font-weight:700;color:#8ec4a8;font-size:.95rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:.7rem;color:#6a8a6a;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.form-input{background:#222222;border:1px solid #2a2a2a;border-radius:6px;padding:7px 10px;color:#ddeedd;font-size:.82rem;font-family:inherit;outline:none;transition:border-color .15s}
+.form-input:focus{border-color:#8ec4a8}
+.form-select{-webkit-appearance:none;appearance:none;background:#222222 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236a8a6a'/%3E%3C/svg%3E") no-repeat right 10px center;border:1px solid #2a2a2a;border-radius:6px;padding:7px 28px 7px 10px;color:#ddeedd;font-size:.82rem;font-family:inherit;outline:none;cursor:pointer}
+.form-select:focus{border-color:#8ec4a8}
+.time-row{display:flex;align-items:center;gap:5px}
+.time-row span{color:#4a6a4a;font-size:.8rem}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;flex-wrap:wrap}
+.btn-primary{padding:7px 20px;border-radius:7px;border:none;cursor:pointer;font-size:.82rem;font-family:inherit;background:#3d6b52;color:#ddeedd;font-weight:700;transition:all .15s}
+.btn-primary:hover{background:#3d6b52}
+.btn-blue{background:#3498db;color:#fff}
+.btn-blue:hover{background:#2980b9}
+.btn-cancel{padding:7px 16px;border-radius:7px;border:1px solid #2a2a2a;cursor:pointer;font-size:.82rem;font-family:inherit;background:transparent;color:#6a8a6a;transition:all .15s}
+.btn-cancel:hover{border-color:#6a8a6a;color:#a8c4a8}
+.btn-danger{padding:7px 16px;border-radius:7px;border:none;cursor:pointer;font-size:.82rem;font-family:inherit;background:#3a1010;color:#e74c3c;transition:all .15s;margin-right:auto}
+.btn-danger:hover{background:#e74c3c;color:#fff}
+/* IMPORT */
+.import-ta{width:100%;height:150px;background:#222222;border:1px solid #2a2a2a;border-radius:6px;padding:8px 10px;color:#ddeedd;font-size:.7rem;font-family:'JetBrains Mono',monospace;resize:vertical;outline:none}
+.import-ta:focus{border-color:#8ec4a8}
+.import-preview{overflow:auto;border:1px solid #2a2a2a;border-radius:6px;max-height:180px}
+.import-preview table{border-collapse:collapse;font-size:.65rem;width:100%}
+.import-preview th{background:#111111;padding:4px 8px;color:#6a8a6a;font-weight:700;border-bottom:1px solid #2a2a2a;white-space:nowrap;position:sticky;top:0}
+.import-preview td{padding:3px 8px;border-bottom:1px solid #161616;color:#a8c4a8;white-space:nowrap}
+.mode-opts{display:flex;gap:10px;flex-wrap:wrap}
+.mode-opt{display:flex;align-items:center;gap:5px;font-size:.75rem;color:#6a8a6a;cursor:pointer;user-select:none}
+.mode-opt input{accent-color:#8ec4a8}
+/* CONFIRM */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:2000}
+.confirm-overlay.open{display:flex}
+.confirm-box{background:#161616;border:1px solid #e74c3c;border-radius:10px;padding:20px;width:340px;max-width:90vw;display:flex;flex-direction:column;gap:12px}
+.confirm-title{font-weight:700;color:#e74c3c;font-size:.9rem}
+.confirm-msg{font-size:.8rem;color:#a8c4a8;line-height:1.5}
+/* POPOVER */
+.pop{position:fixed;background:#161616;border:1px solid #2a2a2a;border-radius:10px;padding:12px;width:240px;z-index:800;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none}
+.pop.open{display:block}
+.pop-title{font-size:.73rem;font-weight:700;color:#8ec4a8;margin-bottom:8px}
+.pop-row{display:flex;flex-direction:column;gap:3px;margin-bottom:7px}
+.pop-lbl{font-size:.63rem;color:#4a6a4a;text-transform:uppercase;letter-spacing:.3px}
+.pop-input{background:#222222;border:1px solid #2a2a2a;border-radius:5px;padding:5px 8px;color:#ddeedd;font-size:.75rem;font-family:inherit;outline:none;width:100%}
+.pop-input:focus{border-color:#8ec4a8}
+.pop-btns{display:flex;gap:6px;justify-content:flex-end;margin-top:4px}
+.pop-btn{padding:4px 11px;border-radius:5px;border:1px solid #2a2a2a;background:transparent;color:#6a8a6a;font-size:.7rem;font-family:inherit;cursor:pointer;transition:all .15s}
+.pop-btn.save{border-color:#8ec4a8;color:#8ec4a8;background:#181818}
+.pop-btn.save:hover{background:#3d6b52;color:#ddeedd}
+/* TOOLTIP */
+.tip{position:fixed;background:#161616;border:1px solid #5c8c72;border-radius:8px;padding:8px 12px;font-size:.7rem;color:#ddeedd;z-index:500;pointer-events:none;opacity:0;transition:opacity .15s;max-width:200px;line-height:1.6}
+.tip.show{opacity:1}
+.tip-ep{color:#8ec4a8;font-weight:700;font-family:'JetBrains Mono',monospace}
+.tip-lbl{color:#4a6a4a}
+/* TOAST */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(8px);background:#3d6b52;color:#ddeedd;padding:8px 20px;border-radius:16px;font-size:.8rem;font-weight:700;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:#e74c3c;color:#fff}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-brand">就你意見最多 <span id="fb-status" title="連線中..." style="font-size:.7rem;cursor:default">🟡</span></div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-tab="schedule">📋 節目排程</div>
+    <div class="nav-tab" data-tab="gantt">📅 甘特圖</div>
+    <div class="nav-tab" data-tab="calendar">🗓 月曆</div>
+    <div class="nav-tab" data-tab="kanban">📌 後期看板</div>
+    <div class="nav-tab" data-tab="dashboard">📊 儀表板</div>
+  </div>
+  <div class="nav-actions">
+    <button class="nav-btn import-btn" onclick="openImport()">↑ 匯入 CSV</button>
+    <button class="nav-btn export-btn" onclick="openExport()">↓ 匯出 CSV</button>
+    <button class="nav-btn primary" onclick="openAddEp()">＋ 新增集數</button>
+  </div>
+</nav>
+
+<!-- TAB: SCHEDULE -->
+<div class="tab-panel active" id="tab-schedule">
+  <div class="filter-bar">
+    <button class="filter-pill active" data-sf="all">全部</button>
+    <button class="filter-pill" data-sf="confirmed">已確認</button>
+    <button class="filter-pill" data-sf="pending">待確認</button>
+    <button class="filter-pill" data-sf="inviting">邀約中</button>
+    <div class="filter-sep"></div>
+    <button class="filter-pill" data-sr="week">本週</button>
+    <button class="filter-pill" data-sr="month">本月</button>
+    <button class="filter-pill" data-sr="all">全部日期</button>
+    <div class="filter-sep"></div>
+    <button class="filter-pill active" data-ss="broadcast">播出日排序</button>
+    <button class="filter-pill" data-ss="recording">錄音日排序</button>
+    <div class="filter-sep"></div>
+    <input class="filter-search" id="sched-search" placeholder="搜尋主題／來賓…" oninput="renderSched()">
+  </div>
+  <div class="scroll-body">
+    <table class="sched-table">
+      <thead><tr>
+        <th style="width:58px">集數</th>
+        <th style="width:90px">播出日</th>
+        <th style="width:110px">錄音日</th>
+        <th style="width:105px">場地時間</th>
+        <th style="width:46px;text-align:center">場地✓</th>
+        <th style="width:105px">來賓通告時間</th>
+        <th style="width:76px">來賓狀態</th>
+        <th>主題</th>
+        <th style="width:110px">來賓</th>
+        <th style="width:42px;text-align:center">訪綱</th>
+        <th style="width:150px">備註</th>
+        <th style="width:54px;text-align:center">操作</th>
+      </tr></thead>
+      <tbody id="sched-tbody"></tbody>
+    </table>
+    <div id="sched-empty" class="empty-state" style="display:none">
+      <div class="empty-icon">🎙️</div>
+      <div class="empty-title">尚無集數資料</div>
+      <div style="font-size:.8rem">點擊右上角「＋ 新增集數」開始記錄</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB: GANTT -->
+<div class="tab-panel" id="tab-gantt">
+  <div class="filter-bar">
+    <span class="filter-label">顯示週數</span>
+    <div class="gtoggle-group">
+      <button class="gtoggle" data-gw="4">4週</button>
+      <button class="gtoggle on" data-gw="8">8週</button>
+      <button class="gtoggle" data-gw="12">12週</button>
+    </div>
+    <div class="filter-sep"></div>
+    <span class="filter-label">顯示項目</span>
+    <div class="gtoggle-group">
+      <button class="gtoggle on" data-gl="rec">🎙 錄音</button>
+      <button class="gtoggle on" data-gl="yt">📺 上架</button>
+      <button class="gtoggle" data-gl="pp">後期</button>
+    </div>
+    <div class="gantt-nav-row">
+      <button class="nav-btn" onclick="gPrev()">‹ 前</button>
+      <button class="nav-btn" onclick="gToday()">今天</button>
+      <button class="nav-btn" onclick="gNext()">後 ›</button>
+      <span class="filter-label" id="g-range-lbl" style="margin-left:4px"></span>
+    </div>
+  </div>
+  <div class="gantt-outer" id="gantt-outer"></div>
+  <div class="gantt-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#1e3428;border:1px solid #5c8c72"></div>錄音日</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#5a3d00;border:1px solid #f1c40f"></div>YouTube上架</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4a2a0a;border:1px solid #e67e22"></div>版本1</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2a1a5a;border:1px solid #8b7cf8"></div>文案/封面</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0a2a4a;border:1px solid #3498db"></div>版本2+reel</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div>今日</div>
+  </div>
+</div>
+
+<!-- TAB: CALENDAR -->
+<div class="tab-panel" id="tab-calendar">
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+    <div class="cal-title" id="cal-title"></div>
+    <button class="cal-nav-btn" onclick="calNext()">›</button>
+    <div class="assignee-chips" id="assignee-chips"></div>
+  </div>
+  <div class="cal-wrap">
+    <div class="cal-grid" id="cal-grid" style="grid-template-rows:auto"></div>
+  </div>
+</div>
+
+<!-- TAB: KANBAN -->
+<div class="tab-panel" id="tab-kanban">
+  <div class="filter-bar">
+    <input class="filter-search" id="k-search" placeholder="搜尋集數／來賓…" oninput="renderKanban()">
+    <div class="filter-sep"></div>
+    <button class="filter-pill active" data-kf="all">全部</button>
+    <button class="filter-pill" data-kf="overdue">逾期</button>
+  </div>
+  <div class="kanban-wrap" id="kanban-wrap"></div>
+</div>
+
+<!-- TAB: DASHBOARD -->
+<div class="tab-panel" id="tab-dashboard">
+  <div class="dash-scroll">
+    <div class="dash-grid" id="dash-grid"></div>
+    <div class="memo-wrap" style="padding-top:0">
+      <div class="dash-card" style="margin-bottom:12px">
+        <div class="dash-title">🔗 節目相關連結</div>
+        <div class="d-item"><div class="d-ep" style="min-width:110px;color:#8ec4a8">雲端資料夾</div><div class="d-info"><div class="d-main">Podcast_就你意見最多</div></div></div>
+        <div class="d-item"><div class="d-ep" style="min-width:110px;color:#8ec4a8">YT 網址</div><div class="d-info"><a href="https://www.youtube.com/@TalkIngLoudPodcastTW" target="_blank" style="color:#e74c3c;font-size:.75rem;text-decoration:none">youtube.com/@TalkIngLoudPodcastTW</a></div></div>
+        <div class="d-item"><div class="d-ep" style="min-width:110px;color:#8ec4a8">Instagram</div><div class="d-info"><a href="https://www.instagram.com/talkingloudpodcast/" target="_blank" style="color:#c084fc;font-size:.75rem;text-decoration:none">@talkingloudpodcast</a></div></div>
+        <div class="d-item"><div class="d-ep" style="min-width:110px;color:#8ec4a8">Gmail</div><div class="d-info"><a href="mailto:talkingloudpodcast.tw@gmail.com" style="color:#5c8c72;font-size:.75rem;text-decoration:none">talkingloudpodcast.tw@gmail.com</a></div></div>
+      </div>
+    </div>
+    <div class="memo-wrap">
+      <div class="memo-label">📝 備忘錄</div>
+      <textarea class="memo-area" id="memo-area" placeholder="自由填寫…"></textarea>
+      <div class="memo-saved" id="memo-saved"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/EDIT EP -->
+<div class="modal-overlay" id="ep-modal">
+  <div class="modal">
+    <div class="modal-title" id="ep-modal-title">新增集數</div>
+    <div class="form-row">
+      <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end">
+        <div style="background:#181818;border:1px solid #2a2a2a;border-radius:6px;padding:7px 10px;font-size:.8rem;color:#666;font-family:'JetBrains Mono',monospace" id="f-ep-preview">集數將自動依播出日排序</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">來賓狀態 <span style="color:#555;font-size:.65rem;font-weight:400">選填</span></label>
+        <select class="form-select" id="f-status">
+          <option value="">未設定</option>
+          <option value="邀約中">邀約中</option>
+          <option value="待確認">待確認</option>
+          <option value="已確認">已確認</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+          播出日 <span style="color:#555;font-size:.65rem;font-weight:400">選填</span>
+          <label style="display:flex;align-items:center;gap:5px;font-size:.68rem;color:#888;cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="f-bcast-tbd" style="accent-color:#8ec4a8;width:13px;height:13px" onchange="toggleBcastTbd()"> 播出日未定
+          </label>
+        </label>
+        <select class="form-select" id="f-bcast" style="font-family:inherit"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">錄音日 <span style="color:#555;font-size:.65rem;font-weight:400">選填</span></label>
+        <input class="form-input" id="f-rec" type="date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">場地時間 <span style="color:#555;font-size:.65rem;font-weight:400">選填</span></label>
+        <div class="time-row">
+          <input class="form-input" id="f-vs" type="time" style="flex:1">
+          <span>—</span>
+          <input class="form-input" id="f-ve" type="time" style="flex:1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px">
+          場地已確認 <input type="checkbox" id="f-vc" style="accent-color:#8ec4a8;width:15px;height:15px">
+        </label>
+        <label class="form-label" style="margin-top:8px">來賓通告時間</label>
+        <div class="time-row">
+          <input class="form-input" id="f-gs" type="time" style="flex:1">
+          <span>—</span>
+          <input class="form-input" id="f-ge" type="time" style="flex:1">
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">來賓 <span style="color:#555;font-size:.65rem;font-weight:400">選填</span></label>
+        <input class="form-input" id="f-guest" placeholder="來賓姓名（選填）">
+      </div>
+      <div class="form-group">
+        <label class="form-label">訪綱連結 <span style="color:#555;font-size:.65rem;font-weight:400">選填</span></label>
+        <input class="form-input" id="f-outline" placeholder="https://… （選填）">
+      </div>
+    </div>
+    <div class="form-group full">
+      <label class="form-label" style="display:flex;align-items:center;gap:6px">主題 <span style="color:#e74c3c;font-size:.7rem">★ 必填</span></label>
+      <input class="form-input" id="f-topic" placeholder="節目主題（必填）" required>
+    </div>
+    <div class="form-group full">
+      <label class="form-label">備註 <span style="color:#555;font-size:.65rem;font-weight:400">選填</span></label>
+      <input class="form-input" id="f-notes" placeholder="備註內容（選填）">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-danger" id="ep-del-btn" style="display:none" onclick="confirmDelEp()">刪除</button>
+      <button class="btn-cancel" onclick="closeM('ep-modal')">取消</button>
+      <button class="btn-primary" onclick="saveEp()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: IMPORT -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal modal-lg">
+    <div class="modal-title">匯入 CSV</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">匯入類型</label>
+        <select class="form-select" id="import-type">
+          <option value="schedule">節目排程</option>
+          <option value="postprod">後期進度</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">貼上 CSV 內容（或選擇檔案）</label>
+      <textarea class="import-ta" id="import-text" placeholder="集數,播出日,錄音日,主題,來賓,…"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="nav-btn" onclick="document.getElementById('import-file').click()">📂 選擇 CSV 檔案</button>
+      <input type="file" id="import-file" accept=".csv" style="display:none" onchange="loadFile(event)">
+      <button class="nav-btn" onclick="previewImport()">預覽</button>
+    </div>
+    <div id="import-prev-wrap" style="display:none">
+      <div class="form-label" style="margin-bottom:5px">預覽（前5筆）</div>
+      <div class="import-preview" id="import-prev"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">匯入模式</label>
+      <div class="mode-opts">
+        <label class="mode-opt"><input type="radio" name="imode" value="upsert" checked> 更新已存在＋加入新集數</label>
+        <label class="mode-opt"><input type="radio" name="imode" value="append"> 只加入新集數</label>
+        <label class="mode-opt"><input type="radio" name="imode" value="replace"> 覆蓋全部</label>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeM('import-modal')">取消</button>
+      <button class="btn-primary" onclick="doImport()">匯入</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EXPORT -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal" style="width:360px">
+    <div class="modal-title">匯出 CSV</div>
+    <p style="font-size:.8rem;color:#6a8a6a;line-height:1.6">欄位名稱與 Google Sheets 相同，可直接貼回試算表。</p>
+    <div class="modal-btns" style="flex-direction:column;align-items:stretch;gap:8px">
+      <button class="btn-primary export-btn" style="background:#2a1e10;border:1px solid #c8843a;color:#e8a855;border-radius:7px;padding:9px;font-family:inherit;cursor:pointer;font-size:.82rem" onclick="exportCSV('schedule')">⬇ 下載 節目排程.csv</button>
+      <button class="btn-primary btn-blue" onclick="exportCSV('postprod')">⬇ 下載 後期進度表.csv</button>
+      <button class="btn-cancel" onclick="closeM('export-modal')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM -->
+<div class="confirm-overlay" id="confirm-ov">
+  <div class="confirm-box">
+    <div class="confirm-title" id="conf-title">確認刪除</div>
+    <div class="confirm-msg" id="conf-msg"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn-cancel" onclick="closeConf()">取消</button>
+      <button class="btn-danger" id="conf-ok" style="margin:0">確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- KANBAN POPOVER -->
+<div class="pop" id="pop">
+  <div class="pop-title" id="pop-title"></div>
+  <div class="pop-row"><div class="pop-lbl">截止日</div><input class="pop-input" id="pop-due" type="date"></div>
+  <div class="pop-row"><div class="pop-lbl">負責人</div><input class="pop-input" id="pop-assignee" placeholder="輸入姓名"></div>
+  <div class="pop-btns">
+    <button class="pop-btn" onclick="closePop()">關閉</button>
+    <button class="pop-btn save" onclick="savePop()">儲存</button>
+  </div>
+</div>
+
+<!-- GANTT TOOLTIP -->
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<!-- CAL PP POPUP -->
+<div id="cal-pp-pop">
+  <div class="cpp-title" id="cpp-title"></div>
+  <div class="cpp-row"><label>截止日</label><input type="date" id="cpp-date"></div>
+  <div class="cpp-btns">
+    <button class="cpp-btn save" onclick="cppSave()">儲存日期</button>
+    <button class="cpp-btn done-btn" id="cpp-done-btn" onclick="cppToggleDone()"></button>
+    <button class="cpp-btn cancel" onclick="cppClose()">取消</button>
+  </div>
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────
+const STAGES=[
+  {key:'outline',label:'訪綱',       cls:'ol', color:'#c084fc', def:'亞庭'},  // stage 0: 錄音前一週
+  {key:'v1',     label:'V1',          cls:'v1', color:'#e67e22', def:'資源'},  // stage 1: 播出前兩週
+  {key:'copy',   label:'文案',        cls:'cp', color:'#7c3aed', def:'亞庭'},  // stage 2: 播出前9天
+  {key:'cover',  label:'封面',       cls:'cv', color:'#e91e63', def:'琤琤'},  // stage 3: 播出前一週
+  {key:'v2',     label:'V2+reel',     cls:'v2', color:'#3498db', def:'資源'},  // stage 4: 播出前一週
+  {key:'yt',     label:'Flightcast上架',    cls:'yt', color:'#f1c40f', def:'資源'},  // stage 5: 播出日
+];
+// 慕蓉(PM)全覽；其他人只看自己的
+const CREW_PM='慕蓉';
+const ACOLORS=['#5c8c72','#e67e22','#8b7cf8','#3498db','#e74c3c','#f1c40f','#1abc9c','#e91e63'];
+
+// ── STATE ──────────────────────────────────────────
+const S={
+  eps:[],pp:[],
+  sf:{status:'all',range:'upcoming',sort:'broadcast'},
+  gw:8, gl:{rec:true,yt:true,pp:false},
+  cy:new Date().getFullYear(), cm:new Date().getMonth(),
+  calFA:null,
+  kf:'all',
+  amap:{},  // assignee -> color index
+};
+let gStart=monOf(new Date());
+let editId=null, popPpId=null;
+
+// ── FIREBASE ───────────────────────────────────────
+const _fbConfig={
+  apiKey:"AIzaSyBYowX8BzAMlGE1CjTAKg2y3mZyEbU4StU",
+  authDomain:"talkloudpm.firebaseapp.com",
+  databaseURL:"https://talkloudpm-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"talkloudpm",
+  storageBucket:"talkloudpm.firebasestorage.app",
+  messagingSenderId:"227085703685",
+  appId:"1:227085703685:web:ab84ab17717aa2f7739a6c"
+};
+firebase.initializeApp(_fbConfig);
+const _db=firebase.database();
+let _fbReady=false;
+
+function save(){
+  if(!_fbReady)return;
+  _db.ref('eps').set(S.eps);
+  _db.ref('pp').set(S.pp);
+}
+
+function renderCurrentTab(){
+  const active=document.querySelector('.nav-tab.active');
+  const n=active?active.dataset.tab:'schedule';
+  if(n==='schedule')renderSched();
+  else if(n==='gantt')renderGantt();
+  else if(n==='calendar')renderCal();
+  else if(n==='kanban')renderKanban();
+  else if(n==='dashboard')renderDash();
+}
+
+function initFirebase(){
+  // 連線狀態指示
+  _db.ref('.info/connected').on('value',snap=>{
+    const el=document.getElementById('fb-status');
+    if(el){el.title=snap.val()?'已連線 Firebase':'Firebase 離線中';el.textContent=snap.val()?'🟢':'🔴';}
+  });
+  // 第一次讀取：若 Firebase 空但 localStorage 有資料 → 遷移
+  _db.ref('/').once('value').then(snap=>{
+    const data=snap.val();
+    if(!data||(!data.eps&&!data.pp)){
+      try{
+        const e=localStorage.getItem('pm_eps');
+        const p=localStorage.getItem('pm_pp');
+        const m=localStorage.getItem('pm_memo');
+        if(e)_db.ref('eps').set(JSON.parse(e));
+        if(p)_db.ref('pp').set(JSON.parse(p));
+        if(m)_db.ref('memo').set(m);
+        toast('資料已遷移至雲端 ☁️');
+      }catch(err){}
+    }
+    _fbReady=true;
+    // 即時監聽
+    _db.ref('eps').on('value',snap=>{
+      S.eps=snap.val()?Object.values(snap.val()):[];
+      renderCurrentTab();
+    });
+    _db.ref('pp').on('value',snap=>{
+      S.pp=snap.val()?Object.values(snap.val()):[];
+    });
+  });
+}
+
+function load(){} // 保留空殼，由 initFirebase 取代
+
+// ── UTILS ──────────────────────────────────────────
+const uid=()=>crypto.randomUUID();
+function today(){return new Date().toISOString().slice(0,10);}
+function monOf(d){const r=new Date(d);const dw=r.getDay();r.setDate(r.getDate()+(dw===0?-6:1-dw));r.setHours(0,0,0,0);return r;}
+function addD(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function iso(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function dUntil(s){if(!s)return null;const a=new Date();a.setHours(0,0,0,0);return Math.round((new Date(s+'T00:00:00')-a)/86400000);}
+function fmD(s){if(!s)return'';const d=new Date(s+'T00:00:00');return`${d.getMonth()+1}/${d.getDate()}`;}
+function fmDF(s){if(!s)return'';const d=new Date(s+'T00:00:00');const W=['日','一','二','三','四','五','六'];return`${d.getMonth()+1}/${d.getDate()} 週${W[d.getDay()]}`;}
+function cdBadge(s){
+  const n=dUntil(s);if(n===null)return'';
+  const cls=n<=7?'urgent':n<=14?'soon':'ok';
+  if(n<0)return`<span class="countdown past">已播出</span>`;
+  if(n===0)return`<span class="countdown urgent">今天</span>`;
+  const d=new Date(s+'T00:00:00');
+  const w=Math.ceil(d.getDate()/7);
+  return`<span class="countdown ${cls}">${d.getMonth()+1}-${w}</span>`;
+}
+function gBadge(st){
+  const m={'已確認':'confirmed','待確認':'pending','邀約中':'inviting'};
+  return`<span class="guest-badge ${m[st]||'empty'}">${st||'未設定'}</span>`;
+}
+function aColor(name){
+  if(!name)return'#4a6a4a';
+  if(!(name in S.amap))S.amap[name]=Object.keys(S.amap).length;
+  return ACOLORS[S.amap[name]%ACOLORS.length];
+}
+function toast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(err?' err':'');
+  t.classList.add('show');clearTimeout(t._t);
+  t._t=setTimeout(()=>t.classList.remove('show'),2600);
+}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+function openM(id){document.getElementById(id).classList.add('open');}
+document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
+
+// ── TABS ───────────────────────────────────────────
+document.querySelectorAll('.nav-tab').forEach(t=>t.addEventListener('click',()=>{
+  const n=t.dataset.tab;
+  document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.getElementById('tab-'+n).classList.add('active');
+  if(n==='gantt')renderGantt();
+  if(n==='calendar')renderCal();
+  if(n==='kanban')renderKanban();
+  if(n==='dashboard')renderDash();
+}));
+
+// ── SCHEDULE FILTERS ───────────────────────────────
+document.querySelectorAll('[data-sf]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-sf]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');S.sf.status=b.dataset.sf;renderSched();
+}));
+document.querySelectorAll('[data-sr]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-sr]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');S.sf.range=b.dataset.sr;renderSched();
+}));
+document.querySelectorAll('[data-ss]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-ss]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');S.sf.sort=b.dataset.ss;renderSched();
+}));
+
+// ── SCHEDULE RENDER ────────────────────────────────
+function filteredEps(){
+  let eps=[...S.eps];
+  const q=(document.getElementById('sched-search')?.value||'').toLowerCase();
+  if(S.sf.status!=='all'){
+    const map={confirmed:'已確認',pending:'待確認',inviting:'邀約中'};
+    eps=eps.filter(e=>e.guestStatus===(map[S.sf.status]||''));
+  }
+  if(S.sf.range!=='all'){
+    const now=new Date();now.setHours(0,0,0,0);
+    eps=eps.filter(e=>{
+      if(!e.broadcastDate)return true; // 未定播出日永遠顯示
+      const d=new Date(e.broadcastDate+'T00:00:00');
+      if(S.sf.range==='week'){const m=monOf(now);return d>=m&&d<=addD(m,6);}
+      if(S.sf.range==='month')return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+      // 'upcoming'：只顯示今天（含）以後
+      return d>=now;
+    });
+  }
+  if(q)eps=eps.filter(e=>(e.topic||'').toLowerCase().includes(q)||(e.guest||'').toLowerCase().includes(q)||(e.epNumber||'').toLowerCase().includes(q));
+  const key=S.sf.sort==='recording'?'recordingDate':'broadcastDate';
+  eps.sort((a,b)=>{
+    const da=a[key]||'9999', db=b[key]||'9999';
+    return da<db?-1:da>db?1:0;
+  });
+  return eps;
+}
+
+function renderSched(){
+  const eps=filteredEps();
+  const tbody=document.getElementById('sched-tbody');
+  const empty=document.getElementById('sched-empty');
+  if(!eps.length){tbody.innerHTML='';empty.style.display='flex';return;}
+  empty.style.display='none';
+  tbody.innerHTML=eps.map(ep=>{
+    const vt=ep.venueStartTime&&ep.venueEndTime?`${ep.venueStartTime}-${ep.venueEndTime}`:'';
+    const gt=ep.guestNotifyStart&&ep.guestNotifyEnd?`${ep.guestNotifyStart}-${ep.guestNotifyEnd}`:'';
+    const ol=ep.outlineUrl?`<a href="${ep.outlineUrl}" target="_blank" class="link-icon" title="開啟訪綱">🔗</a>`:'';
+    return`<tr onclick="openEditEp('${ep.id}')">
+      <td><span class="ep-num">${ep.epNumber||''}</span></td>
+      <td class="date-cell">${ep.broadcastDate?fmD(ep.broadcastDate)+cdBadge(ep.broadcastDate):'<span class="tbd-badge">播出日未定</span>'}</td>
+      <td class="date-cell">${fmDF(ep.recordingDate)}</td>
+      <td class="date-cell">${vt}</td>
+      <td style="text-align:center" onclick="event.stopPropagation()"><input type="checkbox" class="check-toggle" ${ep.venueConfirmed?'checked':''} onchange="toggleVC('${ep.id}',this.checked)"></td>
+      <td class="date-cell">${gt}</td>
+      <td onclick="event.stopPropagation()">${gBadge(ep.guestStatus)}</td>
+      <td>${ep.topic||'<span style="color:#3a5a3a">點擊新增</span>'}</td>
+      <td>${ep.guest||''}</td>
+      <td style="text-align:center" onclick="event.stopPropagation()">${ol}</td>
+      <td>${ep.notes||''}</td>
+      <td style="text-align:center;white-space:nowrap" onclick="event.stopPropagation()">
+        <button class="act-btn" onclick="copyRow('${ep.id}')" title="複製到剪貼簿（可貼 Google Sheets）">📋</button>
+        <button class="act-btn" onclick="delEpById('${ep.id}')" title="刪除">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleVC(id,v){const ep=S.eps.find(e=>e.id===id);if(ep){ep.venueConfirmed=v;save();}}
+
+function inlineE(span,id,field){
+  if(span.querySelector('input'))return;
+  const cur=span.classList.contains('empty')?'':span.textContent;
+  const inp=document.createElement('input');
+  inp.className='cell-input';inp.value=cur;
+  span.innerHTML='';span.appendChild(inp);inp.focus();inp.select();
+  const commit=()=>{const ep=S.eps.find(e=>e.id===id);if(ep){ep[field]=inp.value;save();}renderSched();};
+  inp.addEventListener('blur',commit);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}if(e.key==='Escape')renderSched();});
+}
+
+// ── EP MODAL ───────────────────────────────────────
+function openAddEp(){
+  editId=null;
+  document.getElementById('ep-modal-title').textContent='新增集數';
+  document.getElementById('ep-del-btn').style.display='none';
+  ['f-rec','f-vs','f-ve','f-gs','f-ge','f-guest','f-outline','f-topic','f-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-status').value='';
+  document.getElementById('f-vc').checked=false;
+  document.getElementById('f-bcast-tbd').checked=true;
+  populateBcastSelect('');
+  toggleBcastTbd();
+  openM('ep-modal');
+}
+function openEditEp(id){
+  editId=id;const ep=S.eps.find(e=>e.id===id);if(!ep)return;
+  document.getElementById('ep-modal-title').textContent=`編輯 ${ep.epNumber||'（播出日未定）'}`;
+  document.getElementById('ep-del-btn').style.display='block';
+  const prev=document.getElementById('f-ep-preview');
+  if(prev)prev.textContent=ep.epNumber?ep.epNumber+' — 儲存後自動重排':'（播出日未定，集數空白）';
+  const hasBcast=!!ep.broadcastDate;
+  document.getElementById('f-bcast-tbd').checked=!hasBcast;
+  populateBcastSelect(ep.broadcastDate||'');
+  toggleBcastTbd();
+  document.getElementById('f-rec').value=ep.recordingDate||'';
+  document.getElementById('f-vs').value=ep.venueStartTime||'';
+  document.getElementById('f-ve').value=ep.venueEndTime||'';
+  document.getElementById('f-vc').checked=!!ep.venueConfirmed;
+  document.getElementById('f-gs').value=ep.guestNotifyStart||'';
+  document.getElementById('f-ge').value=ep.guestNotifyEnd||'';
+  document.getElementById('f-status').value=ep.guestStatus||'';
+  document.getElementById('f-guest').value=ep.guest||'';
+  document.getElementById('f-outline').value=ep.outlineUrl||'';
+  document.getElementById('f-topic').value=ep.topic||'';
+  document.getElementById('f-notes').value=ep.notes||'';
+  openM('ep-modal');
+}
+function syncPPDates(ep){
+  // stage 0 訪綱: 錄音日前一週
+  // stage 1 版本1: 播出日前14天
+  // stage 2 文案:  播出日前10天
+  // stage 3 封面:  播出日前7天
+  // stage 4 V2+reel: 播出日前7天
+  // stage 5 yt上架: 用播出日顯示，不存 due
+  S.pp.filter(p=>p.eid===ep.id).forEach(p=>{
+    if(p.done)return; // 已完成不覆蓋
+    if(p.stage===0&&ep.recordingDate)
+      p.due=iso(addD(new Date(ep.recordingDate+'T00:00:00'),-7));
+    if(p.stage===1&&ep.broadcastDate)
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-14));
+    if(p.stage===2&&ep.broadcastDate)
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-9));  // V1+5天
+    if(p.stage===3&&ep.broadcastDate)
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-7));  // 上架文案+2天
+    if(p.stage===4&&ep.broadcastDate)
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-7));
+  });
+}
+function saveEp(){
+  const topic=document.getElementById('f-topic').value.trim();
+  if(!topic){toast('請填入主題（唯一必填欄位）',true);document.getElementById('f-topic').focus();return;}
+  const bcastVal=document.getElementById('f-bcast-tbd').checked?'':document.getElementById('f-bcast').value;
+  const d={epNumber:'EP??',broadcastDate:bcastVal,recordingDate:document.getElementById('f-rec').value,
+    venueStartTime:document.getElementById('f-vs').value,venueEndTime:document.getElementById('f-ve').value,
+    venueConfirmed:document.getElementById('f-vc').checked,
+    guestNotifyStart:document.getElementById('f-gs').value,guestNotifyEnd:document.getElementById('f-ge').value,
+    guestStatus:document.getElementById('f-status').value,guest:document.getElementById('f-guest').value.trim(),
+    outlineUrl:document.getElementById('f-outline').value.trim(),topic:topic,
+    notes:document.getElementById('f-notes').value.trim()};
+  if(editId){
+    const ep=S.eps.find(e=>e.id===editId);
+    if(ep){
+      Object.assign(ep,d);
+      syncPPDates(ep);
+    }
+  }else{
+    const ep={id:uid(),...d};S.eps.push(ep);
+    STAGES.forEach((st,i)=>S.pp.push({id:uid(),eid:ep.id,epNum:'EP??',stage:i,assignee:st.def||'',due:'',done:null}));
+    syncPPDates(ep);
+  }
+  const changed=autoRenumber();
+  save();closeM('ep-modal');renderSched();
+  toast(changed?'已儲存，集數已自動更新':'已儲存');
+}
+function confirmDelEp(){
+  if(!editId)return;
+  const ep=S.eps.find(e=>e.id===editId);
+  closeM('ep-modal');
+  showConf(`刪除 ${ep?.epNumber}？`,'此集數及後期資料將永久刪除。',()=>{
+    S.eps=S.eps.filter(e=>e.id!==editId);
+    S.pp=S.pp.filter(p=>p.eid!==editId);
+    autoRenumber();save();renderSched();toast('已刪除，集數已重新排列');
+  });
+}
+function delEpById(id){
+  const ep=S.eps.find(e=>e.id===id);
+  showConf(`刪除 ${ep?.epNumber}？`,'此集數及後期資料將永久刪除。',()=>{
+    S.eps=S.eps.filter(e=>e.id!==id);
+    S.pp=S.pp.filter(p=>p.eid!==id);
+    autoRenumber();save();renderSched();toast('已刪除，集數已重新排列');
+  });
+}
+
+// ── CONFIRM ────────────────────────────────────────
+function showConf(title,msg,cb){
+  document.getElementById('conf-title').textContent=title;
+  document.getElementById('conf-msg').textContent=msg;
+  document.getElementById('conf-ok').onclick=()=>{closeConf();cb();};
+  document.getElementById('confirm-ov').classList.add('open');
+}
+function closeConf(){document.getElementById('confirm-ov').classList.remove('open');}
+
+// ── GANTT ──────────────────────────────────────────
+document.querySelectorAll('[data-gw]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-gw]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');S.gw=parseInt(b.dataset.gw);renderGantt();
+}));
+document.querySelectorAll('[data-gl]').forEach(b=>b.addEventListener('click',()=>{
+  b.classList.toggle('on');S.gl[b.dataset.gl]=b.classList.contains('on');renderGantt();
+}));
+function gToday(){gStart=monOf(new Date());renderGantt();}
+function gPrev(){gStart=addD(gStart,-7);renderGantt();}
+function gNext(){gStart=addD(gStart,7);renderGantt();}
+
+function renderGantt(){
+  const outer=document.getElementById('gantt-outer');
+  const now=today();
+  const days=S.gw*7;
+  const dates=[];for(let i=0;i<days;i++)dates.push(addD(gStart,i));
+  const eps=[...S.eps].sort((a,b)=>(a.broadcastDate||'')<(b.broadcastDate||'')?-1:1);
+  const DW=['日','一','二','三','四','五','六'];
+  const COLW=32, LABELW=100;
+
+  // range label
+  document.getElementById('g-range-lbl').textContent=`${fmD(iso(gStart))} — ${fmD(iso(addD(gStart,days-1)))}`;
+
+  // Build HTML using a table for sticky support
+  let h='<div style="position:relative;min-width:max-content">';
+  // Use CSS grid
+  const cols=[`${LABELW}px`,...dates.map(()=>`${COLW}px`)].join(' ');
+  h+=`<div style="display:grid;grid-template-columns:${cols}">`;
+
+  // ── Week header row ──
+  h+=`<div class="gantt-corner" style="grid-row:1;grid-column:1;position:sticky;top:0;left:0;z-index:15"></div>`;
+  for(let w=0;w<S.gw;w++){
+    const ws=addD(gStart,w*7);
+    h+=`<div class="gantt-week-hdr" style="grid-row:1;grid-column:${w*7+2}/span 7">${ws.getMonth()+1}/${ws.getDate()} 週</div>`;
+  }
+
+  // ── Day header row ──
+  h+=`<div style="grid-row:2;grid-column:1;background:#111111;border-right:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;position:sticky;top:26px;left:0;z-index:14"></div>`;
+  dates.forEach((d,i)=>{
+    const isT=iso(d)===now, isW=d.getDay()===0||d.getDay()===6;
+    h+=`<div class="gantt-day-hdr ${isT?'today-hdr':''} ${isW?'weekend-hdr':''}" style="grid-row:2;grid-column:${i+2}">
+      <span class="dn">${d.getDate()}</span><span class="dw">${DW[d.getDay()]}</span>
+    </div>`;
+  });
+
+  // ── EP rows ──
+  eps.forEach((ep,ri)=>{
+    const row=ri+3;
+    h+=`<div class="gantt-ep-lbl" style="grid-row:${row};grid-column:1;top:${(ri+2)*28}px">${ep.epNumber}<small>${ep.guest||''}</small></div>`;
+    // build per-column bar map so bars go INSIDE cells (position:relative)
+    const barMap={};
+    const addBar=(ci,cls,icon,tipArgs)=>{
+      if(!barMap[ci])barMap[ci]=[];
+      barMap[ci].push(`<div class="gantt-bar ${cls}" onmouseenter="showTip(event,${tipArgs})" onmouseleave="hideTip()">${icon}</div>`);
+    };
+    if(S.gl.rec&&ep.recordingDate){
+      const ci=dates.findIndex(d=>iso(d)===ep.recordingDate);
+      if(ci>=0)addBar(ci,'rec','🎙',`'${ep.epNumber}','🎙 錄音','${ep.recordingDate}','${(ep.guest||'').replace(/'/g,"\\'")}' `);
+    }
+    if(S.gl.yt&&ep.broadcastDate){
+      const ci=dates.findIndex(d=>iso(d)===ep.broadcastDate);
+      if(ci>=0)addBar(ci,'yt','📺',`'${ep.epNumber}','📺 上架（播出日）','${ep.broadcastDate}','${(ep.guest||'').replace(/'/g,"\\'")}' `);
+    }
+    if(S.gl.pp){
+      [0,1,2,3,4].forEach(si=>{
+        const pp=S.pp.find(p=>p.eid===ep.id&&p.stage===si);
+        if(!pp?.due)return;
+        const ci=dates.findIndex(d=>iso(d)===pp.due);
+        if(ci<0)return;
+        addBar(ci,STAGES[si].cls,'•',`'${ep.epNumber}','${STAGES[si].label}','${pp.due}','${(pp.assignee||'').replace(/'/g,"\\'")}' `);
+      });
+    }
+    dates.forEach((d,ci)=>{
+      const isT=iso(d)===now, isW=d.getDay()===0||d.getDay()===6;
+      const inner=(barMap[ci]||[]).join('');
+      h+=`<div class="gantt-cell ${isT?'today-c':''} ${isW?'wknd':''}" style="grid-row:${row};grid-column:${ci+2}">${inner}</div>`;
+    });
+  });
+
+  h+='</div>';
+
+  // today line
+  const ti=dates.findIndex(d=>iso(d)===now);
+  if(ti>=0){
+    const lx=LABELW+ti*COLW+COLW/2;
+    h+=`<div class="today-vline" style="left:${lx}px;height:${(eps.length+2)*28}px"></div>`;
+  }
+  h+='</div>';
+
+  if(!eps.length)h='<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">尚無集數資料</div></div>';
+  outer.innerHTML=h;
+}
+
+function showTip(e,ep,type,date,name){
+  const t=document.getElementById('tip');
+  t.innerHTML=`<div class="tip-ep">${ep}</div><div><span class="tip-lbl">類型 </span>${type}</div><div><span class="tip-lbl">日期 </span>${fmDF(date)}</div>${name?`<div><span class="tip-lbl">人員 </span>${name}</div>`:''}`;
+  t.style.left=(e.clientX+14)+'px';t.style.top=(e.clientY-10)+'px';t.classList.add('show');
+}
+function hideTip(){document.getElementById('tip').classList.remove('show');}
+
+// ── CALENDAR ───────────────────────────────────────
+function calPrev(){S.cm--;if(S.cm<0){S.cm=11;S.cy--;}renderCal();}
+function calNext(){S.cm++;if(S.cm>11){S.cm=0;S.cy++;}renderCal();}
+
+function renderCal(){
+  const {cy:Y,cm:M}=S;
+  const MN=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  document.getElementById('cal-title').textContent=`${Y} 年 ${MN[M]}`;
+  const now=today();
+
+  // collect assignees — 固定顯示所有成員 + 動態 assignee
+  S.amap={};
+  const CREW_LIST=['資源','亞庭','琤琤'];
+  CREW_LIST.forEach(n=>aColor(n)); // 預先分配顏色
+  S.pp.forEach(p=>{if(p.assignee)aColor(p.assignee);});
+
+  // assignee chips
+  const chipEl=document.getElementById('assignee-chips');
+  const allOn=!S.calFA;
+  const allNames=[...new Set([...CREW_LIST,...Object.keys(S.amap)])];
+  chipEl.innerHTML=`<button class="achip ${allOn?'on':''}" style="border-color:#8ec4a8;color:#8ec4a8;background:${allOn?'#8ec4a822':'transparent'}" onclick="calFA(null)">全部</button>`+
+    allNames.map(a=>{
+      const c=aColor(a);const on=S.calFA===a;
+      const pmBadge=a===CREW_PM?' 👁':'';
+      return`<button class="achip ${on?'on':''}" style="border-color:${c};color:${c};background:${on?c+'33':'transparent'}" onclick="calFA('${a}')">${a}${pmBadge}</button>`;
+    }).join('');
+
+  // events map
+  const evMap={};
+  const pmView=S.calFA===CREW_PM; // 慕蓉全覽
+  S.pp.forEach(p=>{
+    if(!p.due)return;
+    if(p.stage===5)return; // yt上架改用播出日顯示，不重複
+    if(S.calFA&&!pmView&&p.assignee!==S.calFA)return;
+    if(!evMap[p.due])evMap[p.due]=[];
+    const ep=S.eps.find(e=>e.id===p.eid);
+    evMap[p.due].push({p,ep});
+  });
+  S.eps.forEach(ep=>{
+    if(ep.recordingDate){
+      if(!evMap[ep.recordingDate])evMap[ep.recordingDate]=[];
+      evMap[ep.recordingDate].push({p:null,ep,isRec:true});
+    }
+    if(ep.broadcastDate){
+      if(!evMap[ep.broadcastDate])evMap[ep.broadcastDate]=[];
+      evMap[ep.broadcastDate].push({p:null,ep,isYt:true});
+    }
+  });
+
+  // build grid
+  const first=new Date(Y,M,1);
+  const last=new Date(Y,M+1,0);
+  const DH=['一','二','三','四','五','六','日'];
+  let h=DH.map(d=>`<div class="cal-dh">${d}</div>`).join('');
+
+  let cur=monOf(first);
+  const end=addD(monOf(addD(last,6)),6);
+  const DW=['日','一','二','三','四','五','六'];
+
+  while(cur<=end){
+    const s=iso(cur);
+    const isT=s===now, isO=cur.getMonth()!==M, isW=cur.getDay()===0||cur.getDay()===6;
+    const evs=evMap[s]||[];
+    h+=`<div class="cal-cell ${isT?'today':''} ${isO?'other':''} ${isW?'wknd':''}">
+      <div class="cal-dn">${cur.getDate()}</div>
+      ${evs.map(ev=>{
+        if(ev.isRec)return`<div class="cal-ev" style="background:#181818;border-color:#5c8c72;color:#d4ffd4" title="${ev.ep.epNumber} 錄音｜${ev.ep.topic||''}"><div class="cal-ev-header"><span class="cal-ev-ep">${ev.ep.epNumber}</span><span class="cal-ev-task">🎙 錄音</span></div><div class="cal-ev-topic">${ev.ep.topic||''}</div></div>`;
+        if(ev.isYt)return`<div class="cal-ev" style="background:#2a1e00;border-color:#f1c40f;color:#fff8d4" title="${ev.ep.epNumber} 上架｜${ev.ep.topic||''}"><div class="cal-ev-header"><span class="cal-ev-ep">${ev.ep.epNumber}</span><span class="cal-ev-task">📺 上架</span></div><div class="cal-ev-topic">${ev.ep.topic||''}</div></div>`;
+        const st=STAGES[ev.p.stage];const c=st.color;const done=!!ev.p.done;
+        const tp=ev.ep?.topic||'';
+        return`<div class="cal-ev ${done?'done':''}" style="background:${c}22;border-color:${c};color:${c}" onclick="calEditPP(event,'${ev.p.id}')" title="${ev.ep?.epNumber} ${st.label}｜${tp}（點擊調整）"><div class="cal-ev-header"><span class="cal-ev-ep">${ev.ep?.epNumber||''}</span><span class="cal-ev-task">${st.label}</span></div><div class="cal-ev-topic">${tp}</div></div>`;
+      }).join('')}
+    </div>`;
+    cur=addD(cur,1);
+  }
+
+  document.getElementById('cal-grid').innerHTML=h;
+}
+function calFA(name){S.calFA=name;renderCal();}
+
+let cppId=null;
+function calEditPP(e,ppId){
+  e.stopPropagation();
+  const p=S.pp.find(x=>x.id===ppId);if(!p)return;
+  const ep=S.eps.find(x=>x.id===p.eid);
+  cppId=ppId;
+  const pop=document.getElementById('cal-pp-pop');
+  document.getElementById('cpp-title').textContent=`${ep?.epNumber||''} ${STAGES[p.stage].label}`;
+  document.getElementById('cpp-date').value=p.due||'';
+  document.getElementById('cpp-done-btn').textContent=p.done?'取消完成':'標記完成';
+  // position near click
+  const x=Math.min(e.clientX+8, window.innerWidth-220);
+  const y=Math.min(e.clientY+8, window.innerHeight-160);
+  pop.style.left=x+'px'; pop.style.top=y+'px';
+  pop.classList.add('show');
+}
+function cppClose(){
+  document.getElementById('cal-pp-pop').classList.remove('show');
+  cppId=null;
+}
+function cppSave(){
+  const p=S.pp.find(x=>x.id===cppId);if(!p)return;
+  p.due=document.getElementById('cpp-date').value;
+  save();cppClose();renderCal();toast('截止日已更新');
+}
+function cppToggleDone(){
+  const p=S.pp.find(x=>x.id===cppId);if(!p)return;
+  p.done=p.done?null:today();
+  save();cppClose();renderCal();
+  toast(p.done?'已標記完成':'已取消完成');
+}
+document.addEventListener('click',e=>{
+  const pop=document.getElementById('cal-pp-pop');
+  if(pop&&pop.classList.contains('show')&&!pop.contains(e.target))cppClose();
+});
+
+// ── KANBAN ─────────────────────────────────────────
+document.querySelectorAll('[data-kf]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-kf]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');S.kf=b.dataset.kf;renderKanban();
+}));
+
+function renderKanban(){
+  const wrap=document.getElementById('kanban-wrap');
+  const q=(document.getElementById('k-search')?.value||'').toLowerCase();
+  const now=today();
+  let h='';
+
+  STAGES.forEach((stage,si)=>{
+    let cards=S.eps.filter(ep=>{
+      const all=S.pp.filter(p=>p.eid===ep.id);
+      if(!all.length)return false;
+      const prevDone=all.filter(p=>p.stage<si).every(p=>!!p.done);
+      const cur=all.find(p=>p.stage===si);
+      return prevDone&&cur&&!cur.done;
+    });
+    if(q)cards=cards.filter(ep=>(ep.epNumber||'').toLowerCase().includes(q)||(ep.guest||'').toLowerCase().includes(q)||(ep.topic||'').toLowerCase().includes(q));
+    if(S.kf==='overdue')cards=cards.filter(ep=>{
+      const p=S.pp.find(x=>x.eid===ep.id&&x.stage===si);
+      return p?.due&&p.due<now&&!p.done;
+    });
+    h+=`<div class="k-col">
+      <div class="k-col-accent" style="background:${stage.color}"></div>
+      <div class="k-col-hdr"><span class="k-col-title" style="color:${stage.color}">${stage.label}</span><span class="k-count">${cards.length}</span></div>
+      <div class="k-cards">
+        ${cards.map(ep=>{
+          const p=S.pp.find(x=>x.eid===ep.id&&x.stage===si);
+          const ov=p?.due&&p.due<now&&!p.done;
+          const ac=p?.assignee?aColor(p.assignee):'#4a6a4a';
+          return`<div class="k-card ${ov?'ov':''}" onclick="openPop(event,'${p?.id}','${ep.epNumber}')">
+            <div class="k-ep">${ep.epNumber}${p?.assignee?`<span class="k-assignee" style="background:${ac}33;color:${ac};margin-left:5px">${p.assignee}</span>`:''}
+            </div>
+            <div class="k-topic">${ep.topic||'（未填主題）'}</div>
+            <div class="k-guest">${ep.guest||''}</div>
+            <div class="k-meta">
+              <span class="k-due ${ov?'ov':''}">${p?.due?fmD(p.due):'未設截止日'}</span>
+              <button class="k-done-btn" onclick="event.stopPropagation();advance('${ep.id}',${si})">完成→</button>
+            </div>
+          </div>`;
+        }).join('')||'<div style="font-size:.7rem;color:#3a5a3a;text-align:center;padding:14px">無</div>'}
+      </div>
+    </div>`;
+  });
+
+  // Done col
+  const doneEps=S.pp.filter(p=>p.stage===3&&!!p.done).map(p=>S.eps.find(e=>e.id===p.eid)).filter(Boolean);
+  h+=`<div class="k-col">
+    <div class="k-col-accent" style="background:#5c8c72"></div>
+    <div class="k-col-hdr"><span class="k-col-title" style="color:#8ec4a8">✅ 已完成</span><span class="k-count">${doneEps.length}</span></div>
+    <div class="k-cards">
+      ${doneEps.map(ep=>`<div class="k-card" style="opacity:.55">
+        <div class="k-ep">${ep.epNumber}</div>
+        <div class="k-topic">${ep.topic||''}</div>
+        <div class="k-guest">${ep.guest||''}</div>
+        <div class="k-meta"><span style="font-size:.63rem;color:#8ec4a8;font-weight:700">✅ 已上架</span></div>
+      </div>`).join('')||'<div style="font-size:.7rem;color:#3a5a3a;text-align:center;padding:14px">無</div>'}
+    </div>
+  </div>`;
+  wrap.innerHTML=h;
+}
+
+function advance(eid,si){
+  const p=S.pp.find(x=>x.eid===eid&&x.stage===si);
+  if(!p)return;p.done=today();save();renderKanban();
+  toast(`已完成 ${STAGES[si].label}`);
+}
+
+function openPop(e,ppId,epNum){
+  e.stopPropagation();popPpId=ppId;
+  const p=S.pp.find(x=>x.id===ppId);
+  const st=p?STAGES[p.stage]:null;
+  document.getElementById('pop-title').textContent=`${epNum} — ${st?.label||''}`;
+  document.getElementById('pop-due').value=p?.due||'';
+  document.getElementById('pop-assignee').value=p?.assignee||'';
+  const pop=document.getElementById('pop');
+  const r=e.currentTarget.getBoundingClientRect();
+  pop.style.left=Math.min(r.left,window.innerWidth-250)+'px';
+  pop.style.top=(r.top+20)+'px';pop.classList.add('open');
+}
+function closePop(){document.getElementById('pop').classList.remove('open');}
+function savePop(){
+  const p=S.pp.find(x=>x.id===popPpId);if(!p)return;
+  p.due=document.getElementById('pop-due').value;
+  p.assignee=document.getElementById('pop-assignee').value.trim();
+  save();closePop();renderKanban();
+  if(document.getElementById('tab-calendar').classList.contains('active'))renderCal();
+  if(document.getElementById('tab-gantt').classList.contains('active'))renderGantt();
+  toast('已儲存');
+}
+document.addEventListener('click',e=>{
+  const pop=document.getElementById('pop');
+  if(pop.classList.contains('open')&&!pop.contains(e.target))closePop();
+});
+
+// ── DASHBOARD ──────────────────────────────────────
+// ── MEMO ──────────────────────────────────────────
+(function(){
+  const ta=document.getElementById('memo-area');
+  const sv=document.getElementById('memo-saved');
+  if(!ta)return;
+  let t,_localEdit=false;
+  // 載入雲端備忘錄
+  _db.ref('memo').once('value').then(snap=>{ta.value=snap.val()||'';});
+  // 即時監聽（其他人改動時更新，但自己正在打字時不覆蓋）
+  _db.ref('memo').on('value',snap=>{
+    if(!_localEdit)ta.value=snap.val()||'';
+  });
+  ta.addEventListener('input',()=>{
+    _localEdit=true;
+    clearTimeout(t);
+    t=setTimeout(()=>{
+      _db.ref('memo').set(ta.value);
+      sv.textContent='已自動儲存 ☁️';sv.style.opacity='1';
+      setTimeout(()=>{sv.style.opacity='0';_localEdit=false;},1500);
+    },600);
+  });
+})();
+
+function renderDash(){
+  const now=today();
+  const nd=new Date(now+'T00:00:00');
+  const mStart=new Date(nd.getFullYear(),nd.getMonth(),1);
+  const mEnd=new Date(nd.getFullYear(),nd.getMonth()+1,0);
+  const mStartIso=iso(mStart), mEndIso=iso(mEnd);
+
+  const recW=S.eps.filter(e=>e.recordingDate>=mStartIso&&e.recordingDate<=mEndIso).sort((a,b)=>a.recordingDate<b.recordingDate?-1:1);
+  const ytW=S.pp.filter(p=>p.stage===3&&p.due>=mStartIso&&p.due<=mEndIso).map(p=>({p,ep:S.eps.find(e=>e.id===p.eid)})).filter(x=>x.ep);
+  const ov=S.pp.filter(p=>!p.done&&p.due&&p.due<now).map(p=>({p,ep:S.eps.find(e=>e.id===p.eid)})).filter(x=>x.ep);
+
+  const total=S.eps.length;
+  const conf=S.eps.filter(e=>e.guestStatus==='已確認').length;
+  const ppTotal=S.pp.length, ppDone=S.pp.filter(p=>!!p.done).length;
+  const pG=total?Math.round(conf/total*100):0;
+  const pP=ppTotal?Math.round(ppDone/ppTotal*100):0;
+
+  const next=S.eps.filter(e=>e.broadcastDate>=now).sort((a,b)=>a.broadcastDate<b.broadcastDate?-1:1)[0];
+
+  document.getElementById('dash-grid').innerHTML=`
+  <div class="dash-card">
+    <div class="dash-title">🎙 ${nd.getMonth()+1}月錄音 <span class="dash-badge ok">${recW.length}</span></div>
+    ${recW.length?recW.map(ep=>`<div class="d-item">
+      <div class="d-ep">${ep.epNumber}</div>
+      <div class="d-info"><div class="d-main">${ep.topic||'（未填主題）'}</div><div class="d-sub">${fmDF(ep.recordingDate)} ${ep.venueStartTime?ep.venueStartTime+'-'+ep.venueEndTime:''}</div></div>
+      <div class="d-right">${ep.venueConfirmed?'<span style="color:#8ec4a8;font-size:.7rem">✓場地</span>':'<span style="color:#f39c12;font-size:.7rem">場地待確</span>'}</div>
+    </div>`).join(''):'<div class="dash-empty">本月無錄音</div>'}
+  </div>
+  <div class="dash-card">
+    <div class="dash-title">📺 ${nd.getMonth()+1}月上架 <span class="dash-badge ok">${ytW.length}</span></div>
+    ${ytW.length?ytW.map(({p,ep})=>`<div class="d-item">
+      <div class="d-ep">${ep.epNumber}</div>
+      <div class="d-info"><div class="d-main">${ep.topic||'（未填主題）'}</div><div class="d-sub">預定 ${fmD(p.due)}</div></div>
+      <div class="d-right">${p.done?'<span style="color:#8ec4a8;font-size:.7rem">✅已上架</span>':'<span style="color:#f39c12;font-size:.7rem">待上架</span>'}</div>
+    </div>`).join(''):'<div class="dash-empty">本月無上架計畫</div>'}
+  </div>
+  <div class="dash-card">
+    <div class="dash-title">📊 整體進度</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-lbl">總集數</div></div>
+      <div class="stat-box"><div class="stat-num">${next?`D-${Math.max(0,dUntil(next.broadcastDate))}`:'—'}</div><div class="stat-lbl">${next?next.epNumber:'下集'}</div></div>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-row"><span class="prog-lbl">來賓確認</span><div class="prog-track"><div class="prog-fill" style="width:${pG}%;background:#5c8c72"></div></div><span class="prog-pct">${pG}%</span></div>
+      <div class="prog-row"><span class="prog-lbl">後期完成</span><div class="prog-track"><div class="prog-fill" style="width:${pP}%;background:#3498db"></div></div><span class="prog-pct">${pP}%</span></div>
+    </div>
+  </div>`;
+}
+
+// ── CSV ────────────────────────────────────────────
+function openImport(){openM('import-modal');document.getElementById('import-prev-wrap').style.display='none';}
+function openExport(){openM('export-modal');}
+
+function parseCSV(txt){
+  return txt.trim().replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(line=>{
+    const cells=[];let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+      else if(c===','&&!inQ){cells.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    cells.push(cur.trim());return cells;
+  });
+}
+function loadFile(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();r.onload=e=>document.getElementById('import-text').value=e.target.result;
+  r.readAsText(f,'UTF-8');
+}
+function previewImport(){
+  const txt=document.getElementById('import-text').value.trim();
+  if(!txt){toast('請先貼上或選擇 CSV',true);return;}
+  const rows=parseCSV(txt);if(rows.length<2){toast('CSV 格式不正確',true);return;}
+  const hdrs=rows[0];const prev=rows.slice(1,6);
+  const wrap=document.getElementById('import-prev-wrap');
+  document.getElementById('import-prev').innerHTML=`<table><thead><tr>${hdrs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${prev.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  wrap.style.display='block';
+}
+function doImport(){
+  const txt=document.getElementById('import-text').value.trim();
+  if(!txt){toast('請先貼上 CSV',true);return;}
+  const type=document.getElementById('import-type').value;
+  const mode=document.querySelector('input[name="imode"]:checked').value;
+  const rows=parseCSV(txt);if(rows.length<2){toast('CSV 格式不正確',true);return;}
+  const hdrs=rows[0].map(h=>h.toLowerCase().trim());
+  const data=rows.slice(1).filter(r=>r.some(c=>c));
+  const get=(row,...keys)=>{for(const k of keys){const i=hdrs.findIndex(h=>h.includes(k));if(i>=0)return row[i]||'';}return'';};
+
+  if(type==='schedule'){
+    const imported=data.map(row=>({
+      id:uid(),epNumber:get(row,'集數','ep'),
+      broadcastDate:pDate(get(row,'播出日')),recordingDate:pDate(get(row,'錄音日')),
+      venueStartTime:'',venueEndTime:'',
+      venueConfirmed:get(row,'確認場地').includes('true')||get(row,'確認場地')==='1',
+      guestNotifyStart:'',guestNotifyEnd:'',
+      guestStatus:get(row,'狀況','status','來賓狀'),
+      guest:get(row,'來賓','guest'),outlineUrl:get(row,'訪綱'),
+      topic:get(row,'主題','topic'),notes:get(row,'備註','notes'),
+    })).filter(e=>e.epNumber);
+    if(mode==='replace'){
+      S.eps=imported;S.pp=[];
+      imported.forEach(ep=>STAGES.forEach((_,i)=>S.pp.push({id:uid(),eid:ep.id,epNum:ep.epNumber,stage:i,assignee:'',due:'',done:null})));
+    }else{
+      imported.forEach(ep=>{
+        const xi=S.eps.findIndex(e=>e.epNumber===ep.epNumber);
+        if(xi>=0){if(mode==='upsert')Object.assign(S.eps[xi],ep,{id:S.eps[xi].id});}
+        else{S.eps.push(ep);STAGES.forEach((_,i)=>S.pp.push({id:uid(),eid:ep.id,epNum:ep.epNumber,stage:i,assignee:'',due:'',done:null}));}
+      });
+    }
+    save();closeM('import-modal');renderSched();toast(`已匯入 ${imported.length} 筆排程`);
+  }
+}
+function pDate(s){
+  if(!s)return'';
+  const m1=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if(m1)return`${m1[1]}-${m1[2].padStart(2,'0')}-${m1[3].padStart(2,'0')}`;
+  const m2=s.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+  if(m2)return`${new Date().getFullYear()}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;
+  return'';
+}
+function copyRow(id){
+  const ep=S.eps.find(e=>e.id===id);if(!ep)return;
+  const vals=[
+    ep.epNumber||'',
+    ep.broadcastDate?fmD(ep.broadcastDate):'',
+    ep.recordingDate?fmDF(ep.recordingDate):'',
+    ep.venueStartTime&&ep.venueEndTime?`${ep.venueStartTime}-${ep.venueEndTime}`:'',
+    ep.venueConfirmed?'TRUE':'FALSE',
+    ep.guestNotifyStart&&ep.guestNotifyEnd?`${ep.guestNotifyStart}-${ep.guestNotifyEnd}`:'',
+    ep.guestStatus||'',
+    ep.topic||'',
+    ep.guest||'',
+    ep.outlineUrl||'',
+    ep.notes||''
+  ];
+  const tsv=vals.map(v=>String(v).replace(/[\t\r\n]/g,' ')).join('\t');
+  const label=ep.epNumber||'此集';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(tsv).then(
+      ()=>toast(`已複製 ${label}，可貼到 Google Sheets`),
+      ()=>fallbackCopy(tsv,label)
+    );
+  }else{fallbackCopy(tsv,label);}
+}
+function fallbackCopy(text,label){
+  const ta=document.createElement('textarea');
+  ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{
+    document.execCommand('copy');
+    toast(`已複製 ${label}，可貼到 Google Sheets`);
+  }catch(e){toast('複製失敗，請手動複製',true);}
+  document.body.removeChild(ta);
+}
+function exportCSV(type){
+  let content='',fn='';
+  if(type==='schedule'){
+    const hdrs=['集數','播出日','錄音日','場地租借時間','已確認場地','來賓通告時間','確認來賓狀況','主題','來賓','訪綱','備註/內容'];
+    const rows=S.eps.map(ep=>[ep.epNumber,ep.broadcastDate?fmD(ep.broadcastDate):'',ep.recordingDate?fmDF(ep.recordingDate):'',
+      ep.venueStartTime&&ep.venueEndTime?`${ep.venueStartTime}-${ep.venueEndTime}`:'',ep.venueConfirmed?'TRUE':'FALSE',
+      ep.guestNotifyStart&&ep.guestNotifyEnd?`${ep.guestNotifyStart}-${ep.guestNotifyEnd}`:'',ep.guestStatus||'',
+      ep.topic||'',ep.guest||'',ep.outlineUrl||'',ep.notes||''].map(v=>`"${String(v).replace(/"/g,'""')}"`));
+    content=[hdrs.join(','),...rows.map(r=>r.join(','))].join('\n');fn=`節目排程_${today()}.csv`;
+  }else{
+    const hdrs=['集數','來賓','版本1截止','版本1完成','文案封面截止','文案封面完成','版本2+reel截止','版本2+reel完成','yt上架截止','yt上架完成','負責人'];
+    const rows=S.eps.map(ep=>{
+      const pps=STAGES.map((_,i)=>S.pp.find(p=>p.eid===ep.id&&p.stage===i));
+      return[ep.epNumber,ep.guest||'',...pps.flatMap(p=>[p?.due||'',p?.done||'']),
+        pps.map(p=>p?.assignee||'').filter(Boolean)[0]||''].map(v=>`"${String(v).replace(/"/g,'""')}"`);
+    });
+    content=[hdrs.join(','),...rows.map(r=>r.join(','))].join('\n');fn=`後期進度表_${today()}.csv`;
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8'}));
+  a.download=fn;a.click();closeM('export-modal');toast(`已下載 ${fn}`);
+}
+
+// ── WEDNESDAY PICKER ─────────────────────────────────
+function getUpcomingWednesdays(count){
+  count=count||72;
+  const result=[];
+  const d=new Date();d.setHours(0,0,0,0);
+  // go back 4 weeks from nearest wednesday
+  while(d.getDay()!==3)d.setDate(d.getDate()-1);
+  d.setDate(d.getDate()-7*4);
+  for(let i=0;i<count;i++){result.push(new Date(d));d.setDate(d.getDate()+7);}
+  return result;
+}
+
+function populateBcastSelect(currentVal){
+  const sel=document.getElementById('f-bcast');
+  if(!sel)return;
+  const weds=getUpcomingWednesdays();
+  const usedDates=S.eps.filter(e=>e.broadcastDate&&e.id!==editId).map(e=>e.broadcastDate);
+  sel.innerHTML='<option value="">── 播出日未定 ──</option>'+
+    weds.map(d=>{
+      const s=iso(d);
+      const used=usedDates.includes(s);
+      return`<option value="${s}" ${s===currentVal?'selected':''} ${used?'style="color:#555"':''}>${d.getMonth()+1}/${d.getDate()} 週三${used?' ✓ 已排':''}${ s===currentVal?' ← 目前':''}</option>`;
+    }).join('');
+}
+
+function toggleBcastTbd(){
+  const tbd=document.getElementById('f-bcast-tbd').checked;
+  const sel=document.getElementById('f-bcast');
+  if(tbd){sel.value='';sel.disabled=true;sel.style.opacity='.35';}
+  else{sel.disabled=false;sel.style.opacity='1';}
+}
+
+// ── AUTO RENUMBER ─────────────────────────────────────
+function autoRenumber(){
+  // Sort: episodes with broadcastDate ascending, TBD at end
+  S.eps.sort((a,b)=>{
+    if(!a.broadcastDate&&!b.broadcastDate)return 0;
+    if(!a.broadcastDate)return 1;
+    if(!b.broadcastDate)return -1;
+    return a.broadcastDate<b.broadcastDate?-1:1;
+  });
+  let changed=false;
+  let epIdx=0;
+  S.eps.forEach(ep=>{
+    // 有播出日才給集數，未定則空白
+    const newNum=ep.broadcastDate?'EP'+String(epIdx++).padStart(2,'0'):'';
+    if(ep.epNumber!==newNum){
+      S.pp.filter(p=>p.eid===ep.id).forEach(p=>p.epNum=newNum);
+      ep.epNumber=newNum;
+      changed=true;
+    }
+  });
+  return changed;
+}
+
+// ── SAMPLE DATA ────────────────────────────────────
+function loadSample(){
+  if(S.eps.length)return;
+  const now=today();
+  const sample=[
+    {epNumber:'EP00',broadcastDate:'2026-03-11',recordingDate:'2026-01-29',venueStartTime:'09:00',venueEndTime:'12:00',venueConfirmed:true,guestNotifyStart:'',guestNotifyEnd:'',guestStatus:'已確認',guest:'',topic:'新節目預告 - 錄音前錄影預告',outlineUrl:'',notes:''},
+    {epNumber:'EP01',broadcastDate:'2026-03-18',recordingDate:'2026-02-23',venueStartTime:'14:30',venueEndTime:'18:30',venueConfirmed:true,guestNotifyStart:'16:30',guestNotifyEnd:'17:30',guestStatus:'已確認',guest:'導演吳維緯',topic:'東野圭吾《嫌疑犯X的獻身》舞台劇',outlineUrl:'',notes:''},
+    {epNumber:'EP02',broadcastDate:'2026-03-25',recordingDate:'2026-03-02',venueStartTime:'11:00',venueEndTime:'15:00',venueConfirmed:true,guestNotifyStart:'13:00',guestNotifyEnd:'14:00',guestStatus:'已確認',guest:'俊耀/尹真',topic:'2026 北藝嚴選：剪劇場《暗夜・籠語・鬼托邦》',outlineUrl:'',notes:''},
+    {epNumber:'EP03',broadcastDate:'2026-04-01',recordingDate:'2026-03-09',venueStartTime:'12:00',venueEndTime:'16:00',venueConfirmed:true,guestNotifyStart:'14:00',guestNotifyEnd:'15:00',guestStatus:'已確認',guest:'導演洪唯堯',topic:'2026 TIFA 莎士比亞的妹妹們《沒有派對》',outlineUrl:'',notes:''},
+    {epNumber:'EP04',broadcastDate:'2026-04-08',recordingDate:'2026-02-11',venueStartTime:'11:00',venueEndTime:'16:00',venueConfirmed:true,guestNotifyStart:'13:00',guestNotifyEnd:'15:00',guestStatus:'已確認',guest:'陳君豪/陳建騏',topic:'華語流行音樂的下一個十年',outlineUrl:'',notes:''},
+    {epNumber:'EP05',broadcastDate:'2026-04-15',recordingDate:'2026-03-23',venueStartTime:'13:00',venueEndTime:'17:00',venueConfirmed:true,guestNotifyStart:'15:00',guestNotifyEnd:'16:00',guestStatus:'待確認',guest:'楊景翔/王安琪',topic:'我不是影后',outlineUrl:'',notes:'5月播出 95折折扣碼'},
+    {epNumber:'EP06',broadcastDate:'2026-04-22',recordingDate:'2026-03-18',venueStartTime:'13:00',venueEndTime:'17:00',venueConfirmed:false,guestNotifyStart:'15:00',guestNotifyEnd:'16:00',guestStatus:'邀約中',guest:'Anna/王鐘惟',topic:'客家流行音樂大賽',outlineUrl:'',notes:''},
+    {epNumber:'EP07',broadcastDate:'2026-04-29',recordingDate:'2026-04-18',venueStartTime:'14:00',venueEndTime:'18:00',venueConfirmed:false,guestNotifyStart:'16:00',guestNotifyEnd:'17:00',guestStatus:'待確認',guest:'顏辰歡/蘇志翔',topic:'外百老匯音樂劇《I Love You, You\'re Perfect, Now Change》',outlineUrl:'',notes:''},
+  ];
+  const nowD=new Date(now+'T00:00:00');
+  sample.forEach((d,idx)=>{
+    const ep={id:uid(),...d};S.eps.push(ep);
+    STAGES.forEach((st,si)=>{
+      const daysOff=-(7*(3-si)+7*(sample.length-1-idx));
+      const dueD=addD(new Date(ep.broadcastDate+'T00:00:00'),-(14-si*3));
+      const isDone=dueD<nowD&&si<2;
+      S.pp.push({id:uid(),eid:ep.id,epNum:ep.epNumber,stage:si,
+        assignee:['小陳','小林','小陳','小林'][si],
+        due:iso(dueD),done:isDone?iso(addD(dueD,1)):null});
+    });
+  });
+  save();
+}
+
+// ── INIT ───────────────────────────────────────────
+autoRenumber();
+initFirebase();
+</script>
+</body>
+</html>
