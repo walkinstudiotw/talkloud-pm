@@ -298,6 +298,67 @@ body{display:flex;flex-direction:column}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(8px);background:#262626;color:#f0ece8;padding:8px 20px;border-radius:16px;font-size:.8rem;font-weight:700;opacity:0;transition:all .25s;pointer-events:none;z-index:9999;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{background:#e74c3c;color:#fff}
+/* ── MOBILE BOTTOM TABS ─────────────────────────── */
+.mobile-tabs{display:none}
+.mob-more-btn{display:none}
+.mob-more-menu{position:fixed;bottom:56px;right:0;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px 0 0 0;z-index:300;min-width:190px;flex-direction:column;box-shadow:0 -4px 20px #000c;display:none}
+.mob-more-menu.open{display:flex}
+.mob-menu-item{padding:13px 18px;border:none;background:transparent;color:#cccccc;font-size:.85rem;font-family:inherit;cursor:pointer;text-align:left;border-bottom:1px solid #2a2a2a;transition:background .15s}
+.mob-menu-item:last-child{border-bottom:none}
+.mob-menu-item:hover{background:#262626;color:#fff}
+.mob-menu-item.is-import{color:#5a9ae0}
+.mob-menu-item.is-export{color:#f0a030}
+/* ── RESPONSIVE ─────────────────────────────────── */
+@media(max-width:640px){
+  html,body{font-size:15px}
+  body{padding-bottom:56px}
+  /* Navbar */
+  .navbar{padding:0 10px;height:44px}
+  .nav-tabs{display:none}
+  .mob-more-btn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;font-size:1.1rem;letter-spacing:.1em}
+  .nav-btn#undo-btn,.nav-btn.import-btn,.nav-btn.export-btn{display:none}
+  .nav-brand{font-size:.85rem;margin-right:10px}
+  /* Bottom tabs */
+  .mobile-tabs{display:flex;position:fixed;bottom:0;left:0;right:0;background:#161616;border-top:1px solid #2a2a2a;z-index:200;height:56px}
+  .mob-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.05rem;color:#555;cursor:pointer;gap:1px;transition:color .15s;padding:5px 0;user-select:none}
+  .mob-tab>span{font-size:.52rem;color:#666;margin-top:1px}
+  .mob-tab.active{color:#fff}
+  .mob-tab.active>span{color:#aaa}
+  /* Filter bar: horizontal scroll */
+  .filter-bar{overflow-x:auto;flex-wrap:nowrap;padding:6px 10px;-webkit-overflow-scrolling:touch}
+  .filter-bar::-webkit-scrollbar{display:none}
+  .filter-search{width:110px;font-size:.72rem}
+  /* Schedule table: hide secondary columns */
+  .sched-table{min-width:0}
+  .sched-table th:nth-child(3),.sched-table td:nth-child(3),
+  .sched-table th:nth-child(4),.sched-table td:nth-child(4),
+  .sched-table th:nth-child(5),.sched-table td:nth-child(5),
+  .sched-table th:nth-child(6),.sched-table td:nth-child(6),
+  .sched-table th:nth-child(10),.sched-table td:nth-child(10),
+  .sched-table th:nth-child(11),.sched-table td:nth-child(11){display:none}
+  .sched-table td{padding:5px 6px;font-size:.7rem}
+  .sched-table thead th{padding:5px 6px;font-size:.6rem}
+  /* Calendar */
+  .cal-cell{min-height:72px;padding:3px}
+  .cal-ev-topic{display:none}
+  .assignee-chips{margin-left:0;width:100%;margin-top:4px}
+  .cal-nav{flex-wrap:wrap;gap:6px;padding:7px 10px}
+  /* Dashboard */
+  .dash-grid{grid-template-columns:1fr;padding:10px}
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  /* Kanban */
+  .kanban-wrap{padding:8px 6px}
+  .k-col{flex:0 0 82vw}
+  /* Modal */
+  .modal{max-width:98vw;padding:14px;border-radius:10px}
+  .form-row{grid-template-columns:1fr}
+  .modal-lg{width:98vw}
+  /* Toast: above bottom tabs */
+  .toast{bottom:66px}
+  /* Gantt filter */
+  #tab-gantt .filter-bar{overflow-x:auto;flex-wrap:nowrap}
+  .gtoggle-group,.gantt-nav-row{flex-shrink:0}
+}
 </style>
 </head>
 <body>
@@ -316,8 +377,25 @@ body{display:flex;flex-direction:column}
     <button class="nav-btn import-btn" onclick="openImport()">↑ 匯入 CSV</button>
     <button class="nav-btn export-btn" onclick="openExport()">↓ 匯出 CSV</button>
     <button class="nav-btn primary" onclick="openAddEp()">＋ 新增集數</button>
+    <button class="nav-btn mob-more-btn" onclick="toggleMobMenu()" title="更多">•••</button>
   </div>
 </nav>
+
+<!-- Mobile bottom tab bar -->
+<div class="mobile-tabs" id="mobile-tabs">
+  <div class="mob-tab active" data-tab="schedule">📋<span>排程</span></div>
+  <div class="mob-tab" data-tab="gantt">📅<span>甘特</span></div>
+  <div class="mob-tab" data-tab="calendar">🗓<span>月曆</span></div>
+  <div class="mob-tab" data-tab="kanban">📌<span>看板</span></div>
+  <div class="mob-tab" data-tab="dashboard">📊<span>儀表板</span></div>
+</div>
+
+<!-- Mobile more menu -->
+<div class="mob-more-menu" id="mob-more-menu">
+  <button class="mob-menu-item" onclick="undo();closeMobMenu()">↩ 復原上一步</button>
+  <button class="mob-menu-item is-import" onclick="openImport();closeMobMenu()">↑ 匯入 CSV</button>
+  <button class="mob-menu-item is-export" onclick="openExport();closeMobMenu()">↓ 匯出 CSV</button>
+</div>
 
 <!-- TAB: SCHEDULE -->
 <div class="tab-panel active" id="tab-schedule">
@@ -766,17 +844,29 @@ function openM(id){document.getElementById(id).classList.add('open');}
 document.querySelectorAll('.modal-overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');}));
 
 // ── TABS ───────────────────────────────────────────
-document.querySelectorAll('.nav-tab').forEach(t=>t.addEventListener('click',()=>{
-  const n=t.dataset.tab;
+function switchTab(n){
   document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.mob-tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));
-  t.classList.add('active');
+  const nt=document.querySelector('.nav-tab[data-tab="'+n+'"]');
+  const mt=document.querySelector('.mob-tab[data-tab="'+n+'"]');
+  if(nt)nt.classList.add('active');
+  if(mt)mt.classList.add('active');
   document.getElementById('tab-'+n).classList.add('active');
   if(n==='gantt')renderGantt();
   if(n==='calendar')renderCal();
   if(n==='kanban')renderKanban();
   if(n==='dashboard')renderDash();
-}));
+}
+document.querySelectorAll('.nav-tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+document.querySelectorAll('.mob-tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+
+// ── MOBILE MORE MENU ────────────────────────────────
+function toggleMobMenu(){document.getElementById('mob-more-menu').classList.toggle('open');}
+function closeMobMenu(){document.getElementById('mob-more-menu').classList.remove('open');}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('#mob-more-menu')&&!e.target.closest('.mob-more-btn'))closeMobMenu();
+});
 
 // ── SCHEDULE FILTERS ───────────────────────────────
 document.querySelectorAll('[data-sf]').forEach(b=>b.addEventListener('click',()=>{
