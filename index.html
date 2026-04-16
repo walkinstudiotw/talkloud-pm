@@ -805,7 +805,7 @@ function renderSched(){
     const vt=ep.venueStartTime&&ep.venueEndTime?`${ep.venueStartTime}-${ep.venueEndTime}`:'';
     const gt=ep.guestNotifyStart&&ep.guestNotifyEnd?`${ep.guestNotifyStart}-${ep.guestNotifyEnd}`:'';
     const ol=ep.outlineUrl?`<a href="${ep.outlineUrl}" target="_blank" class="link-icon" title="開啟訪綱">🔗</a>`:'';
-    return`<tr onclick="openEditEp('${ep.id}')">
+    return`<tr ${READONLY?'':` onclick="openEditEp('${ep.id}')"`}>
       <td><span class="ep-num">${ep.epNumber||''}</span></td>
       <td class="date-cell">${ep.broadcastDate?fmD(ep.broadcastDate)+cdBadge(ep.broadcastDate):'<span class="tbd-badge">播出日未定</span>'}</td>
       <td class="date-cell">${fmDF(ep.recordingDate)}</td>
@@ -818,8 +818,8 @@ function renderSched(){
       <td style="text-align:center" onclick="event.stopPropagation()">${ol}</td>
       <td>${ep.notes||''}</td>
       <td style="text-align:center;white-space:nowrap" onclick="event.stopPropagation()">
-        <button class="act-btn" onclick="copyRow('${ep.id}')" title="複製到剪貼簿（可貼 Google Sheets）">📋</button>
-        <button class="act-btn" onclick="delEpById('${ep.id}')" title="刪除">🗑️</button>
+        ${READONLY?'':`<button class="act-btn" onclick="copyRow('${ep.id}')" title="複製到剪貼簿（可貼 Google Sheets）">📋</button>
+        <button class="act-btn del" onclick="delEpById('${ep.id}')" title="刪除">🗑️</button>`}
       </td>
     </tr>`;
   }).join('');
@@ -1547,6 +1547,19 @@ function loadSample(){
     });
   });
   save();
+}
+
+// ── READONLY MODE ──────────────────────────────────
+const READONLY=new URLSearchParams(location.search).has('readonly');
+if(READONLY){
+  document.addEventListener('DOMContentLoaded',()=>{});
+  // 加檢視模式標示
+  const badge=document.createElement('span');
+  badge.textContent='👁 檢視模式';
+  badge.style.cssText='font-size:.7rem;color:#888;padding:2px 8px;border:1px solid #333;border-radius:8px;margin-left:8px';
+  document.querySelector('.nav-brand').appendChild(badge);
+  // 隱藏編輯相關按鈕
+  document.querySelectorAll('.nav-btn.import-btn,.nav-btn.export-btn,.nav-btn.primary').forEach(b=>b.style.display='none');
 }
 
 // ── INIT ───────────────────────────────────────────
