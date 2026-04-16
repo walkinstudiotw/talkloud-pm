@@ -312,6 +312,7 @@ body{display:flex;flex-direction:column}
     <div class="nav-tab" data-tab="dashboard">📊 儀表板</div>
   </div>
   <div class="nav-actions">
+    <button class="nav-btn" id="undo-btn" onclick="undo()" title="復原上一步（⌘Z）" disabled style="opacity:.4">↩ 復原</button>
     <button class="nav-btn import-btn" onclick="openImport()">↑ 匯入 CSV</button>
     <button class="nav-btn export-btn" onclick="openExport()">↓ 匯出 CSV</button>
     <button class="nav-btn primary" onclick="openAddEp()">＋ 新增集數</button>
@@ -653,6 +654,30 @@ firebase.initializeApp(_fbConfig);
 const _db=firebase.database();
 let _fbReady=false;
 
+// ── UNDO HISTORY ──────────────────────────────────
+const _history=[];
+const _MAX_HISTORY=20;
+function pushHistory(){
+  _history.push(JSON.stringify({eps:S.eps,pp:S.pp}));
+  if(_history.length>_MAX_HISTORY)_history.shift();
+  const btn=document.getElementById('undo-btn');
+  if(btn){btn.disabled=false;btn.style.opacity='1';}
+}
+function undo(){
+  if(!_history.length)return;
+  const prev=JSON.parse(_history.pop());
+  S.eps=prev.eps;S.pp=prev.pp;
+  save();renderCurrentTab();
+  toast('已復原上一步');
+  const btn=document.getElementById('undo-btn');
+  if(btn&&!_history.length){btn.disabled=true;btn.style.opacity='.4';}
+}
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='z'&&!e.shiftKey){
+    e.preventDefault();undo();
+  }
+});
+
 function save(){
   if(!_fbReady)return;
   _db.ref('eps').set(S.eps);
@@ -825,7 +850,7 @@ function renderSched(){
   }).join('');
 }
 
-function toggleVC(id,v){const ep=S.eps.find(e=>e.id===id);if(ep){ep.venueConfirmed=v;save();}}
+function toggleVC(id,v){const ep=S.eps.find(e=>e.id===id);if(ep){pushHistory();ep.venueConfirmed=v;save();}}
 
 function inlineE(span,id,field){
   if(span.querySelector('input'))return;
@@ -833,7 +858,7 @@ function inlineE(span,id,field){
   const inp=document.createElement('input');
   inp.className='cell-input';inp.value=cur;
   span.innerHTML='';span.appendChild(inp);inp.focus();inp.select();
-  const commit=()=>{const ep=S.eps.find(e=>e.id===id);if(ep){ep[field]=inp.value;save();}renderSched();};
+  const commit=()=>{const ep=S.eps.find(e=>e.id===id);if(ep){pushHistory();ep[field]=inp.value;save();}renderSched();};
   inp.addEventListener('blur',commit);
   inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}if(e.key==='Escape')renderSched();});
 }
@@ -918,7 +943,7 @@ function saveEp(){
     syncPPDates(ep);
   }
   const changed=autoRenumber();
-  save();closeM('ep-modal');renderSched();
+  pushHistory();save();closeM('ep-modal');renderSched();
   toast(changed?'已儲存，集數已自動更新':'已儲存');
 }
 function confirmDelEp(){
@@ -926,6 +951,7 @@ function confirmDelEp(){
   const ep=S.eps.find(e=>e.id===editId);
   closeM('ep-modal');
   showConf(`刪除 ${ep?.epNumber}？`,'此集數及後期資料將永久刪除。',()=>{
+    pushHistory();
     S.eps=S.eps.filter(e=>e.id!==editId);
     S.pp=S.pp.filter(p=>p.eid!==editId);
     autoRenumber();save();renderSched();toast('已刪除，集數已重新排列');
@@ -934,6 +960,7 @@ function confirmDelEp(){
 function delEpById(id){
   const ep=S.eps.find(e=>e.id===id);
   showConf(`刪除 ${ep?.epNumber}？`,'此集數及後期資料將永久刪除。',()=>{
+    pushHistory();
     S.eps=S.eps.filter(e=>e.id!==id);
     S.pp=S.pp.filter(p=>p.eid!==id);
     autoRenumber();save();renderSched();toast('已刪除，集數已重新排列');
@@ -1153,12 +1180,12 @@ function cppClose(){
 function cppSave(){
   const p=S.pp.find(x=>x.id===cppId);if(!p)return;
   p.due=document.getElementById('cpp-date').value;
-  save();cppClose();renderCal();toast('截止日已更新');
+  pushHistory();save();cppClose();renderCal();toast('截止日已更新');
 }
 function cppToggleDone(){
   const p=S.pp.find(x=>x.id===cppId);if(!p)return;
   p.done=p.done?null:today();
-  save();cppClose();renderCal();
+  pushHistory();save();cppClose();renderCal();
   toast(p.done?'已標記完成':'已取消完成');
 }
 document.addEventListener('click',e=>{
@@ -1233,7 +1260,7 @@ function renderKanban(){
 
 function advance(eid,si){
   const p=S.pp.find(x=>x.eid===eid&&x.stage===si);
-  if(!p)return;p.done=today();save();renderKanban();
+  if(!p)return;pushHistory();p.done=today();save();renderKanban();
   toast(`已完成 ${STAGES[si].label}`);
 }
 
@@ -1254,7 +1281,7 @@ function savePop(){
   const p=S.pp.find(x=>x.id===popPpId);if(!p)return;
   p.due=document.getElementById('pop-due').value;
   p.assignee=document.getElementById('pop-assignee').value.trim();
-  save();closePop();renderKanban();
+  pushHistory();save();closePop();renderKanban();
   if(document.getElementById('tab-calendar').classList.contains('active'))renderCal();
   if(document.getElementById('tab-gantt').classList.contains('active'))renderGantt();
   toast('已儲存');
@@ -1398,7 +1425,7 @@ function doImport(){
         else{S.eps.push(ep);STAGES.forEach((_,i)=>S.pp.push({id:uid(),eid:ep.id,epNum:ep.epNumber,stage:i,assignee:'',due:'',done:null}));}
       });
     }
-    save();closeM('import-modal');renderSched();toast(`已匯入 ${imported.length} 筆排程`);
+    pushHistory();save();closeM('import-modal');renderSched();toast(`已匯入 ${imported.length} 筆排程`);
   }
 }
 function pDate(s){
