@@ -619,7 +619,7 @@ const STAGES=[
   {key:'v1',     label:'V1',          cls:'v1', color:'#e67e22', def:'資源'},  // stage 1: 播出前兩週
   {key:'copy',   label:'文案',        cls:'cp', color:'#7c3aed', def:'亞庭'},  // stage 2: 播出前9天
   {key:'cover',  label:'封面',       cls:'cv', color:'#e91e63', def:'琤琤'},  // stage 3: 播出前一週
-  {key:'v2',     label:'V2+reel',     cls:'v2', color:'#3498db', def:'資源'},  // stage 4: 播出前一週
+  {key:'v2',     label:'V2+reel',     cls:'v2', color:'#3498db', def:'資源'},  // stage 4: 播出前5天
   {key:'yt',     label:'Flightcast上架',    cls:'yt', color:'#f1c40f', def:'資源'},  // stage 5: 播出日
 ];
 // 慕蓉(PM)全覽；其他人只看自己的
@@ -879,7 +879,7 @@ function syncPPDates(ep){
   // stage 1 版本1: 播出日前14天
   // stage 2 文案:  播出日前10天
   // stage 3 封面:  播出日前7天
-  // stage 4 V2+reel: 播出日前7天
+  // stage 4 V2+reel: 播出日前5天
   // stage 5 yt上架: 用播出日顯示，不存 due
   S.pp.filter(p=>p.eid===ep.id).forEach(p=>{
     if(p.done)return; // 已完成不覆蓋
@@ -892,7 +892,7 @@ function syncPPDates(ep){
     if(p.stage===3&&ep.broadcastDate)
       p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-7));  // 上架文案+2天
     if(p.stage===4&&ep.broadcastDate)
-      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-7));
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-5));  // 播出日前5天
   });
 }
 function saveEp(){
