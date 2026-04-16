@@ -432,7 +432,7 @@ body{display:flex;flex-direction:column}
         <th>主題</th>
         <th style="width:110px">來賓</th>
         <th style="width:42px;text-align:center">訪綱</th>
-        <th style="width:150px">備註</th>
+        ${READONLY?'':`<th style="width:150px">備註</th>`}
         <th style="width:54px;text-align:center">操作</th>
       </tr></thead>
       <tbody id="sched-tbody"></tbody>
@@ -940,7 +940,7 @@ function renderSched(){
       <td>${ep.topic||'<span style="color:#555555">點擊新增</span>'}</td>
       <td>${ep.guest||''}</td>
       <td style="text-align:center" onclick="event.stopPropagation()">${ol}</td>
-      <td>${ep.notes||''}</td>
+      ${READONLY?'':`<td>${ep.notes||''}</td>`}
       <td style="text-align:center;white-space:nowrap" onclick="event.stopPropagation()">
         ${READONLY?'':`<button class="act-btn" onclick="copyRow('${ep.id}')" title="複製到剪貼簿（可貼 Google Sheets）">📋</button>
         <button class="act-btn del" onclick="delEpById('${ep.id}')" title="刪除">🗑️</button>`}
