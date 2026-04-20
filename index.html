@@ -418,6 +418,8 @@ body{display:flex;flex-direction:column}
     <button class="filter-pill" data-ss="recording">錄音日排序</button>
     <div class="filter-sep"></div>
     <input class="filter-search" id="sched-search" placeholder="搜尋主題／來賓…" oninput="renderSched()">
+    <div class="filter-sep"></div>
+    <button class="filter-pill" onclick="copyAllConfirmed()" title="複製所有尚未播出且錄音日、場地、來賓通告、來賓狀況皆已填寫的集數">📋 複製已確認</button>
   </div>
   <div class="scroll-body">
     <table class="sched-table">
@@ -1562,6 +1564,44 @@ function copyRow(id){
   if(navigator.clipboard&&navigator.clipboard.writeText){
     navigator.clipboard.writeText(tsv).then(
       ()=>toast(`已複製 ${label}，可貼到 Google Sheets`),
+      ()=>fallbackCopy(tsv,label)
+    );
+  }else{fallbackCopy(tsv,label);}
+}
+function copyAllConfirmed(){
+  const now=today();
+  const eps=S.eps.filter(e=>{
+    // 尚未播出
+    if(e.broadcastDate&&e.broadcastDate<now)return false;
+    // 必填欄位皆有內容
+    if(!e.recordingDate)return false;
+    if(!e.venueStartTime||!e.venueEndTime)return false;
+    if(!e.guestNotifyStart||!e.guestNotifyEnd)return false;
+    if(!e.guestStatus)return false;
+    return true;
+  }).sort((a,b)=>a.broadcastDate<b.broadcastDate?-1:1);
+  if(!eps.length){toast('沒有符合條件的集數',true);return;}
+  const rows=eps.map(ep=>{
+    const vals=[
+      ep.epNumber||'',
+      ep.broadcastDate?fmD(ep.broadcastDate):'',
+      ep.recordingDate?fmDF(ep.recordingDate):'',
+      ep.venueStartTime&&ep.venueEndTime?`${ep.venueStartTime}-${ep.venueEndTime}`:'',
+      ep.venueConfirmed?'TRUE':'FALSE',
+      ep.guestNotifyStart&&ep.guestNotifyEnd?`${ep.guestNotifyStart}-${ep.guestNotifyEnd}`:'',
+      ep.guestStatus||'',
+      ep.topic||'',
+      ep.guest||'',
+      ep.outlineUrl||'',
+      ep.notes||''
+    ];
+    return vals.map(v=>String(v).replace(/[\t\r\n]/g,' ')).join('\t');
+  });
+  const tsv=rows.join('\n');
+  const label=`${eps.length} 集`;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(tsv).then(
+      ()=>toast(`已複製 ${label}（已確認），可貼到 Google Sheets`),
       ()=>fallbackCopy(tsv,label)
     );
   }else{fallbackCopy(tsv,label);}
