@@ -881,8 +881,15 @@ document.querySelectorAll('[data-sf]').forEach(b=>b.addEventListener('click',()=
   b.classList.add('active');S.sf.status=b.dataset.sf;renderSched();
 }));
 document.querySelectorAll('[data-sr]').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('[data-sr]').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');S.sf.range=b.dataset.sr;renderSched();
+  if(b.dataset.sr==='all'&&S.sf.range==='all'){
+    // 再按一次 → 回到即將播出
+    document.querySelectorAll('[data-sr]').forEach(x=>x.classList.remove('active'));
+    S.sf.range='upcoming';
+  }else{
+    document.querySelectorAll('[data-sr]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');S.sf.range=b.dataset.sr;
+  }
+  renderSched();
 }));
 document.querySelectorAll('[data-ss]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('[data-ss]').forEach(x=>x.classList.remove('active'));
