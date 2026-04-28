@@ -935,7 +935,13 @@ function renderSched(){
   tbody.innerHTML=eps.map(ep=>{
     const vt=ep.venueStartTime&&ep.venueEndTime?`${ep.venueStartTime}-${ep.venueEndTime}`:'';
     const gt=ep.guestNotifyStart&&ep.guestNotifyEnd?`${ep.guestNotifyStart}-${ep.guestNotifyEnd}`:'';
-    const ol=ep.outlineUrl?`<a href="${ep.outlineUrl}" target="_blank" class="link-icon" title="開啟訪綱">🔗</a>`:'';
+    const olPP=S.pp.find(p=>p.eid===ep.id&&p.stage===0);
+    const olDone=!!olPP?.done;
+    const olLink=ep.outlineUrl?`<a href="${ep.outlineUrl}" target="_blank" class="link-icon" title="開啟訪綱" onclick="event.stopPropagation()">🔗</a>`:'';
+    const olCheck=READONLY
+      ?`<span style="color:${olDone?'#4dd87a':'#444'};font-size:.85rem">${olDone?'✓':'—'}</span>`
+      :`<input type="checkbox" class="check-toggle" ${olDone?'checked':''} onchange="toggleOutlineDone('${ep.id}')" title="訪綱完成">`;
+    const ol=`${olCheck}${olLink?'&nbsp;'+olLink:''}`;
     const recToBc=(ep.recordingDate&&ep.broadcastDate)?Math.round((new Date(ep.broadcastDate+'T00:00:00')-new Date(ep.recordingDate+'T00:00:00'))/86400000):null;
     const tightWarn=recToBc!==null&&recToBc<30?' class="tight-warn"':'';
     return`<tr${tightWarn}${READONLY?'':` onclick="openEditEp('${ep.id}')"`}>
@@ -959,6 +965,11 @@ function renderSched(){
 }
 
 function toggleVC(id,v){const ep=S.eps.find(e=>e.id===id);if(ep){pushHistory();ep.venueConfirmed=v;save();}}
+function toggleOutlineDone(id){
+  const p=S.pp.find(x=>x.eid===id&&x.stage===0);if(!p)return;
+  pushHistory();p.done=p.done?null:today();save();renderSched();
+  toast(p.done?'訪綱已標記完成':'訪綱已取消完成');
+}
 
 function inlineE(span,id,field){
   if(span.querySelector('input'))return;
@@ -1369,6 +1380,7 @@ function renderKanban(){
 function advance(eid,si){
   const p=S.pp.find(x=>x.eid===eid&&x.stage===si);
   if(!p)return;pushHistory();p.done=today();save();renderKanban();
+  if(si===0)renderSched(); // 訪綱完成時同步更新節目排程表的打勾狀態
   toast(`已完成 ${STAGES[si].label}`);
 }
 
