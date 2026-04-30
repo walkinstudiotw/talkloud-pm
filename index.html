@@ -128,6 +128,7 @@ body{display:flex;flex-direction:column}
 .gantt-bar.cp{background:#1a0a3a;border:1px solid #7c3aed;color:#d4c4ff}
 .gantt-bar.cv{background:#3d0a2a;border:1px solid #e91e63;color:#ffd4e8}
 .gantt-bar.v2{background:#0a2a4a;border:1px solid #3498db;color:#d4e8ff}
+.gantt-bar.rl{background:#003a3a;border:1px solid #00bcd4;color:#b0f0f0}
 .today-vline{position:absolute;top:0;bottom:0;width:2px;background:#e74c3c;z-index:20;pointer-events:none}
 .today-vline::before{content:'今';position:absolute;top:0;left:3px;font-size:.55rem;color:#e74c3c;font-weight:700}
 .gantt-legend{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:6px 16px;background:#111111;border-top:1px solid #2a2a2a;flex-shrink:0}
@@ -478,7 +479,8 @@ body{display:flex;flex-direction:column}
     <div class="legend-item"><div class="legend-dot" style="background:#4a2a0a;border:1px solid #e67e22"></div>V1</div>
     <div class="legend-item"><div class="legend-dot" style="background:#1a0a3a;border:1px solid #7c3aed"></div>文案</div>
     <div class="legend-item"><div class="legend-dot" style="background:#3d0a2a;border:1px solid #e91e63"></div>封面</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#0a2a4a;border:1px solid #3498db"></div>V2+reel</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0a2a4a;border:1px solid #3498db"></div>V2</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#003a3a;border:1px solid #00bcd4"></div>Reels</div>
     <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div>今日</div>
   </div>
 </div>
@@ -703,12 +705,13 @@ body{display:flex;flex-direction:column}
 <script>
 // ── CONSTANTS ──────────────────────────────────────
 const STAGES=[
-  {key:'outline',label:'訪綱',       cls:'ol', color:'#c084fc', def:'亞庭'},  // stage 0: 錄音前一週
-  {key:'v1',     label:'V1',          cls:'v1', color:'#e67e22', def:'資源'},  // stage 1: 播出前兩週
-  {key:'copy',   label:'文案',        cls:'cp', color:'#7c3aed', def:'亞庭'},  // stage 2: 播出前9天
-  {key:'cover',  label:'封面',       cls:'cv', color:'#e91e63', def:'琤琤'},  // stage 3: 播出前一週
-  {key:'v2',     label:'V2+reel',     cls:'v2', color:'#3498db', def:'資源'},  // stage 4: 播出前5天
-  {key:'yt',     label:'Flightcast上架',    cls:'yt', color:'#f1c40f', def:'資源'},  // stage 5: 播出日
+  {key:'outline',label:'訪綱',           cls:'ol', color:'#c084fc', def:'亞庭'},  // stage 0: 錄音前一週
+  {key:'v1',     label:'V1',              cls:'v1', color:'#e67e22', def:'資源'},  // stage 1: 播出前兩週
+  {key:'copy',   label:'文案',            cls:'cp', color:'#7c3aed', def:'亞庭'},  // stage 2: 播出前9天
+  {key:'cover',  label:'封面',            cls:'cv', color:'#e91e63', def:'琤琤'},  // stage 3: 播出前7天
+  {key:'v2',     label:'V2',              cls:'v2', color:'#3498db', def:'資源'},  // stage 4: 播出前5天
+  {key:'rl',     label:'Reels',           cls:'rl', color:'#00bcd4', def:'資源'},  // stage 5: 播出前3天
+  {key:'yt',     label:'Flightcast上架',  cls:'yt', color:'#f1c40f', def:'資源'},  // stage 6: 播出日
 ];
 // 慕蓉(PM)全覽；其他人只看自己的
 const CREW_PM='慕蓉';
@@ -802,6 +805,7 @@ function initFirebase(){
       }catch(err){}
     }
     _fbReady=true;
+    migrateSplitReels(); // 一次性遷移：V2+reel 分拆為 V2 / Reels
     // 即時監聽
     _db.ref('eps').on('value',snap=>{
       S.eps=snap.val()?Object.values(snap.val()):[];
@@ -814,6 +818,32 @@ function initFirebase(){
 }
 
 function load(){} // 保留空殼，由 initFirebase 取代
+
+// ── STAGE MIGRATION（V2+reel → V2 / Reels 分拆）──────
+function migrateSplitReels(){
+  _db.ref('migrated_split_reels').once('value').then(snap=>{
+    if(snap.val())return; // 已遷移，跳過
+    let changed=false;
+    // Step 1: 舊 stage 5（Flightcast）升為 stage 6
+    S.pp.forEach(p=>{if(p.stage===5){p.stage=6;changed=true;}});
+    // Step 2: 每集新增 stage 5（Reels），due 同 V2
+    S.eps.forEach(ep=>{
+      if(S.pp.find(p=>p.eid===ep.id&&p.stage===5))return;
+      const v2=S.pp.find(p=>p.eid===ep.id&&p.stage===4);
+      S.pp.push({
+        id:crypto.randomUUID(),eid:ep.id,epNum:ep.epNumber||'',
+        stage:5,assignee:STAGES[5].def||'',
+        due:v2?.due||'',done:null
+      });
+      changed=true;
+    });
+    if(changed){
+      _db.ref('pp').set(S.pp);
+      _db.ref('migrated_split_reels').set(true);
+      toast('已新增 Reels 工作項目 ✅');
+    }
+  });
+}
 
 // ── UTILS ──────────────────────────────────────────
 const uid=()=>crypto.randomUUID();
@@ -1019,12 +1049,13 @@ function openEditEp(id){
   openM('ep-modal');
 }
 function syncPPDates(ep){
-  // stage 0 訪綱: 錄音日前一週
-  // stage 1 版本1: 播出日前14天
-  // stage 2 文案:  播出日前10天
-  // stage 3 封面:  播出日前7天
-  // stage 4 V2+reel: 播出日前5天
-  // stage 5 yt上架: 用播出日顯示，不存 due
+  // stage 0 訪綱:   錄音日前7天
+  // stage 1 V1:     播出日前14天
+  // stage 2 文案:   播出日前9天
+  // stage 3 封面:   播出日前7天
+  // stage 4 V2:     播出日前5天
+  // stage 5 Reels:  播出日前3天
+  // stage 6 上架:   用播出日顯示，不存 due
   S.pp.filter(p=>p.eid===ep.id).forEach(p=>{
     if(p.done)return; // 已完成不覆蓋
     if(p.stage===0&&ep.recordingDate)
@@ -1032,11 +1063,13 @@ function syncPPDates(ep){
     if(p.stage===1&&ep.broadcastDate)
       p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-14));
     if(p.stage===2&&ep.broadcastDate)
-      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-9));  // V1+5天
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-9));
     if(p.stage===3&&ep.broadcastDate)
-      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-7));  // 上架文案+2天
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-7));
     if(p.stage===4&&ep.broadcastDate)
-      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-5));  // 播出日前5天
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-5));
+    if(p.stage===5&&ep.broadcastDate)
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-3));  // 播出日前3天
   });
 }
 function saveEp(){
@@ -1160,7 +1193,7 @@ function renderGantt(){
       if(ci>=0)addBar(ci,'yt','📺',`'${ep.epNumber}','📺 上架（播出日）','${ep.broadcastDate}','${(ep.guest||'').replace(/'/g,"\\'")}' `);
     }
     if(S.gl.pp){
-      [0,1,2,3,4].forEach(si=>{
+      [0,1,2,3,4,5].forEach(si=>{
         const pp=S.pp.find(p=>p.eid===ep.id&&p.stage===si);
         if(!pp?.due)return;
         const ci=dates.findIndex(d=>iso(d)===pp.due);
@@ -1228,7 +1261,7 @@ function renderCal(){
   const pmView=S.calFA===CREW_PM; // 慕蓉全覽
   S.pp.forEach(p=>{
     if(!p.due)return;
-    if(p.stage===5)return; // yt上架改用播出日顯示，不重複
+    if(p.stage===6)return; // yt上架改用播出日顯示，不重複
     if(S.calFA&&!pmView&&p.assignee!==S.calFA)return;
     if(!evMap[p.due])evMap[p.due]=[];
     const ep=S.eps.find(e=>e.id===p.eid);
