@@ -822,13 +822,11 @@ function load(){} // 保留空殼，由 initFirebase 取代
 // ── STAGE MIGRATION（V2+reel → V2 / Reels 分拆）──────
 function _reelsDue(ep){
   if(!ep.broadcastDate)return'';
-  const d=new Date(ep.broadcastDate+'T00:00:00');
-  d.setDate(d.getDate()-1);
-  return d.toISOString().slice(0,10);
+  return iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-1));
 }
 function migrateSplitReels(){
   _db.ref('migrated_split_reels').once('value').then(snap=>{
-    if(snap.val()==='v4')return; // 已遷移，跳過
+    if(snap.val()==='v5')return; // 已遷移，跳過
     // 直接從 Firebase 讀取最新資料，避免監聽器尚未觸發時 S.eps/S.pp 為空
     Promise.all([
       _db.ref('eps').once('value'),
@@ -855,10 +853,10 @@ function migrateSplitReels(){
       });
       if(changed){
         _db.ref('pp').set(pp);
-        _db.ref('migrated_split_reels').set('v4');
-        toast('Reels 截止日已更新（上架日前1天）✅');
+        _db.ref('migrated_split_reels').set('v5');
+        toast('Reels 截止日已修正（上架日前1天）✅');
       }else{
-        _db.ref('migrated_split_reels').set('v4');
+        _db.ref('migrated_split_reels').set('v5');
       }
     });
   });
