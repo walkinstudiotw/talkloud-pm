@@ -828,30 +828,39 @@ function _reelsDue(ep){
 }
 function migrateSplitReels(){
   _db.ref('migrated_split_reels').once('value').then(snap=>{
-    if(snap.val()==='v2')return; // 已遷移（含日期修正），跳過
-    let changed=false;
-    // Step 1: 舊 stage 5（Flightcast）升為 stage 6
-    S.pp.forEach(p=>{if(p.stage===5){p.stage=6;changed=true;}});
-    // Step 2: 每集新增/修正 stage 5（Reels），due = 播出前3天
-    S.eps.forEach(ep=>{
-      const existing=S.pp.find(p=>p.eid===ep.id&&p.stage===5);
-      if(existing){
-        // 修正已存在但 due 錯誤的記錄（前次遷移用了 V2 的日期）
-        if(!existing.done){existing.due=_reelsDue(ep);changed=true;}
+    if(snap.val()==='v3')return; // 已遷移，跳過
+    // 直接從 Firebase 讀取最新資料，避免監聽器尚未觸發時 S.eps/S.pp 為空
+    Promise.all([
+      _db.ref('eps').once('value'),
+      _db.ref('pp').once('value')
+    ]).then(([esnap,psnap])=>{
+      const eps=esnap.val()?Object.values(esnap.val()):[];
+      let pp=psnap.val()?Object.values(psnap.val()):[];
+      let changed=false;
+      // Step 1: 舊 stage 5（Flightcast）升為 stage 6
+      pp.forEach(p=>{if(p.stage===5){p.stage=6;changed=true;}});
+      // Step 2: 每集新增/修正 stage 5（Reels），due = 播出前3天
+      eps.forEach(ep=>{
+        const existing=pp.find(p=>p.eid===ep.id&&p.stage===5);
+        if(existing){
+          if(!existing.done){existing.due=_reelsDue(ep);changed=true;}
+        }else{
+          pp.push({
+            id:crypto.randomUUID(),eid:ep.id,epNum:ep.epNumber||'',
+            stage:5,assignee:STAGES[5].def||'',
+            due:_reelsDue(ep),done:null
+          });
+          changed=true;
+        }
+      });
+      if(changed){
+        _db.ref('pp').set(pp);
+        _db.ref('migrated_split_reels').set('v3');
+        toast('Reels 工作項目已建立 ✅');
       }else{
-        S.pp.push({
-          id:crypto.randomUUID(),eid:ep.id,epNum:ep.epNumber||'',
-          stage:5,assignee:STAGES[5].def||'',
-          due:_reelsDue(ep),done:null
-        });
-        changed=true;
+        _db.ref('migrated_split_reels').set('v3');
       }
     });
-    if(changed){
-      _db.ref('pp').set(S.pp);
-      _db.ref('migrated_split_reels').set('v2'); // 版本旗標
-      toast('Reels 截止日已更新（播出前3天）✅');
-    }
   });
 }
 
