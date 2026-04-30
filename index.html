@@ -823,12 +823,12 @@ function load(){} // 保留空殼，由 initFirebase 取代
 function _reelsDue(ep){
   if(!ep.broadcastDate)return'';
   const d=new Date(ep.broadcastDate+'T00:00:00');
-  d.setDate(d.getDate()-3);
+  d.setDate(d.getDate()-1);
   return d.toISOString().slice(0,10);
 }
 function migrateSplitReels(){
   _db.ref('migrated_split_reels').once('value').then(snap=>{
-    if(snap.val()==='v3')return; // 已遷移，跳過
+    if(snap.val()==='v4')return; // 已遷移，跳過
     // 直接從 Firebase 讀取最新資料，避免監聽器尚未觸發時 S.eps/S.pp 為空
     Promise.all([
       _db.ref('eps').once('value'),
@@ -855,10 +855,10 @@ function migrateSplitReels(){
       });
       if(changed){
         _db.ref('pp').set(pp);
-        _db.ref('migrated_split_reels').set('v3');
-        toast('Reels 工作項目已建立 ✅');
+        _db.ref('migrated_split_reels').set('v4');
+        toast('Reels 截止日已更新（上架日前1天）✅');
       }else{
-        _db.ref('migrated_split_reels').set('v3');
+        _db.ref('migrated_split_reels').set('v4');
       }
     });
   });
@@ -1088,7 +1088,7 @@ function syncPPDates(ep){
     if(p.stage===4&&ep.broadcastDate)
       p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-5));
     if(p.stage===5&&ep.broadcastDate)
-      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-3));  // 播出日前3天
+      p.due=iso(addD(new Date(ep.broadcastDate+'T00:00:00'),-1));  // 上架日前1天
   });
 }
 function saveEp(){
