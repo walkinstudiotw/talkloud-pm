@@ -1367,13 +1367,20 @@ function renderKanban(){
   const now=today();
   let h='';
 
+  // 自訂解鎖條件：V2(4) 與 Reels(5) 封面完成後同時出現；Flightcast(6) 需兩者皆完成
+  function stageUnlocked(all,si){
+    if(si<=3)return all.filter(p=>p.stage<si).every(p=>!!p.done);
+    if(si===4||si===5)return all.filter(p=>p.stage<=3).every(p=>!!p.done);
+    if(si===6)return all.filter(p=>p.stage===4||p.stage===5).every(p=>!!p.done)&&
+                     all.filter(p=>p.stage<=3).every(p=>!!p.done);
+    return false;
+  }
   STAGES.forEach((stage,si)=>{
     let cards=S.eps.filter(ep=>{
       const all=S.pp.filter(p=>p.eid===ep.id);
       if(!all.length)return false;
-      const prevDone=all.filter(p=>p.stage<si).every(p=>!!p.done);
       const cur=all.find(p=>p.stage===si);
-      return prevDone&&cur&&!cur.done;
+      return stageUnlocked(all,si)&&cur&&!cur.done;
     });
     if(q)cards=cards.filter(ep=>(ep.epNumber||'').toLowerCase().includes(q)||(ep.guest||'').toLowerCase().includes(q)||(ep.topic||'').toLowerCase().includes(q));
     if(S.kf==='overdue')cards=cards.filter(ep=>{
@@ -1404,7 +1411,7 @@ function renderKanban(){
   });
 
   // Done col
-  const doneEps=S.pp.filter(p=>p.stage===3&&!!p.done).map(p=>S.eps.find(e=>e.id===p.eid)).filter(Boolean);
+  const doneEps=S.pp.filter(p=>p.stage===6&&!!p.done).map(p=>S.eps.find(e=>e.id===p.eid)).filter(Boolean);
   h+=`<div class="k-col">
     <div class="k-col-accent" style="background:#444444"></div>
     <div class="k-col-hdr"><span class="k-col-title" style="color:#aaaaaa">✅ 已完成</span><span class="k-count">${doneEps.length}</span></div>
