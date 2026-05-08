@@ -129,6 +129,51 @@ body{display:flex;flex-direction:column}
 .status-select[data-status="editing"]{background-color:#e8f0fc;color:#1e4a80;border:1px solid #5a9ae0}
 .status-select[data-status="done"]{background-color:#e8f5ec;color:#1e6038;border:1px solid #7de89a}
 
+/* CASHFLOW TAB */
+.cash-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:14px}
+.cash-card{background:#ffffff;border:1px solid #d8d8d8;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.cash-card.recv{border-color:#7de89a;background:#f0f8f2}
+.cash-card.pend{border-color:#f0c878;background:#fff8ee}
+.cash-card.paid{border-color:#5a9ae0;background:#eef4fc}
+.cash-card.studio{border-color:#a08560;background:#faf6ee}
+.cash-card .lbl{font-size:.66rem;color:#666;letter-spacing:.4px;text-transform:uppercase;font-weight:700}
+.cash-card .val{font-family:'JetBrains Mono',monospace;font-size:1.1rem;color:#1a1a1a;font-weight:700}
+.cash-card .val.green{color:#1e6038}
+.cash-card .val.orange{color:#a86a00}
+.cash-card .val.blue{color:#1e4a80}
+.cash-card .val.gold{color:#a08560}
+.cash-card .sub{font-size:.62rem;color:#888;font-family:'JetBrains Mono',monospace}
+.cash-list{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
+.cash-row{background:#ffffff;border:1px solid #d8d8d8;border-radius:8px;overflow:hidden;transition:border-color .12s}
+.cash-row:hover{border-color:#7de89a}
+.cash-row-head{display:grid;grid-template-columns:90px 1fr 80px 100px 90px 30px;gap:10px;align-items:center;padding:10px 14px;cursor:pointer;font-size:.78rem}
+.cash-row-head .ino{font-family:'JetBrains Mono',monospace;font-weight:700;color:#1a1a1a;font-size:.78rem}
+.cash-row-head .cli{color:#1a1a1a}
+.cash-row-head .mon{font-family:'JetBrains Mono',monospace;color:#666;font-size:.7rem}
+.cash-row-head .amt{font-family:'JetBrains Mono',monospace;color:#1e6038;font-weight:700;text-align:right}
+.cash-row-head .chev{color:#888;font-size:.7rem;transition:transform .15s;text-align:center}
+.cash-row.expanded .chev{transform:rotate(90deg)}
+.cash-row-detail{display:none;padding:8px 14px 14px;border-top:1px dashed #e0e0e0;background:#fafafa}
+.cash-row.expanded .cash-row-detail{display:block}
+.cash-line{display:grid;grid-template-columns:1fr 70px 50px 80px 80px 80px 80px;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid #ececec;font-size:.7rem}
+.cash-line:last-child{border-bottom:none}
+.cash-line .lab{color:#1a1a1a}
+.cash-line .who{font-size:.66rem;color:#888}
+.cash-line .num{font-family:'JetBrains Mono',monospace;text-align:right;color:#1a1a1a}
+.cash-line .num.cost{color:#c53030}
+.cash-line .num.split-q{color:#1e4a80;font-weight:700}
+.cash-line .num.split-w{color:#a86a00;font-weight:700}
+.cash-line .num.split-s{color:#a08560;font-weight:700}
+.cash-line-hdr{font-size:.6rem;color:#888;text-transform:uppercase;letter-spacing:.4px;padding:4px 4px 4px;font-weight:700}
+.cash-totals{margin-top:8px;padding:8px 4px;display:grid;grid-template-columns:1fr 70px 50px 80px 80px 80px 80px;gap:8px;border-top:2px solid #d8d8d8;font-size:.74rem;font-weight:700}
+.cash-totals .num{font-family:'JetBrains Mono',monospace;text-align:right}
+.cash-status-toggle{display:flex;gap:0;border:1px solid #d8d8d8;border-radius:6px;overflow:hidden}
+.cash-status-toggle button{flex:1;padding:3px 8px;font-size:.64rem;background:#ffffff;border:none;cursor:pointer;color:#666;font-family:inherit;font-weight:700;border-right:1px solid #d8d8d8}
+.cash-status-toggle button:last-child{border-right:none}
+.cash-status-toggle button.active.sent{background:#fff4e6;color:#a86a00}
+.cash-status-toggle button.active.paid{background:#e8f5ec;color:#1e6038}
+.cash-no-case{color:#c53030;font-style:italic}
+
 /* INVOICED BADGE */
 .invoiced-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.64rem;font-weight:700;white-space:nowrap;cursor:pointer;background:#e8f5ec;color:#1e6038;border:1px solid #7de89a;font-family:'JetBrains Mono',monospace;letter-spacing:.3px;transition:all .15s}
 .invoiced-badge:hover{background:#d8f0e0;border-color:#7de89a;transform:translateY(-1px)}
@@ -700,10 +745,29 @@ body{display:flex;flex-direction:column}
 
 <!-- TAB: CASHFLOW (placeholder) -->
 <div class="tab-panel" id="tab-cashflow">
-  <div class="placeholder-tab">
-    <div class="empty-icon">💵</div>
-    <h2>金流追蹤模組</h2>
-    <p>此分頁將於 Phase 4 完成。功能：列出已寄送的 invoice、自動計算分潤（齊70% / 巫70% / 房子30%）、追蹤付款狀態。</p>
+  <div class="filter-bar">
+    <select class="form-select" id="cash-filter-month" onchange="renderCashflow()" style="width:140px;font-size:.72rem;padding:3px 24px 3px 8px">
+      <option value="all">全部月份</option>
+    </select>
+    <select class="form-select" id="cash-filter-client" onchange="renderCashflow()" style="width:160px;font-size:.72rem;padding:3px 24px 3px 8px">
+      <option value="all">全部客戶</option>
+    </select>
+    <button class="filter-pill active" data-cash-status="all" onclick="setCashStatusFilter('all')">全部</button>
+    <button class="filter-pill" data-cash-status="sent" onclick="setCashStatusFilter('sent')">待收</button>
+    <button class="filter-pill" data-cash-status="paid" onclick="setCashStatusFilter('paid')">已收</button>
+    <span class="spacer"></span>
+    <span class="filter-label" id="cash-count"></span>
+  </div>
+  <div class="scroll-body">
+    <!-- Summary cards -->
+    <div class="cash-summary" id="cash-summary"></div>
+    <!-- Invoice list with expand-to-view-split -->
+    <div id="cash-list" class="cash-list"></div>
+    <div id="cash-empty" class="empty-state" style="display:none">
+      <div class="empty-icon">💵</div>
+      <div class="empty-title">尚無金流資料</div>
+      <div style="font-size:.8rem">先寄出 Invoice 才會出現在此</div>
+    </div>
   </div>
 </div>
 
@@ -897,6 +961,18 @@ body{display:flex;flex-direction:column}
       <div class="form-group">
         <label class="form-label">支出（元，外包/錄音室成本）</label>
         <input class="form-input" id="f-cost" type="number" placeholder="0" inputmode="numeric">
+      </div>
+    </div>
+
+    <!-- 分潤設定 — 是否與工作室分潤 -->
+    <div class="form-group full" style="background:#fff8ee;border:1px solid #f0d8a0;border-radius:8px;padding:10px 12px">
+      <label class="form-label" style="color:#a86a00;margin-bottom:6px">💸 分潤設定</label>
+      <div style="display:flex;gap:14px;font-size:.78rem;align-items:center;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="f-share-studio" style="accent-color:#a86a00" checked>
+          <span>與工作室分潤（房子拿 30%）</span>
+        </label>
+        <span style="font-size:.62rem;color:#888;line-height:1.5">取消勾選 → 負責人拿 100%（扣外包後）</span>
       </div>
     </div>
 
@@ -1615,6 +1691,7 @@ function renderCurrentTab(){
   else if(n==='workitems')renderWorkItems();
   else if(n==='quotations')renderQuotations();
   else if(n==='invoices')renderInvoices();
+  else if(n==='cashflow')renderCashflow();
 }
 document.querySelectorAll('.sb-item[data-tab]').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
 
@@ -1784,6 +1861,7 @@ function openAddCase(){
   document.getElementById('f-notes').value='';
   document.getElementById('f-outsourced').checked=false;
   document.getElementById('f-cost').value='';
+  document.getElementById('f-share-studio').checked=true;  // default share with studio
   // billing-link defaults: independent
   document.getElementById('f-billing-independent').checked=true;
   document.getElementById('f-billing-linked').checked=false;
@@ -1838,6 +1916,8 @@ function openEditCase(id){
   document.getElementById('f-notes').value=c.notes||'';
   document.getElementById('f-outsourced').checked=!!c.isOutsourced;
   document.getElementById('f-cost').value=c.cost||'';
+  // shareWithStudio default true (legacy cases without the field share by default)
+  document.getElementById('f-share-studio').checked=c.shareWithStudio!==false;
   // billing-link state
   const isLinked=!!c.linkedToCaseId;
   document.getElementById('f-billing-independent').checked=!isLinked;
@@ -2199,6 +2279,7 @@ function saveCase(){
     notes:document.getElementById('f-notes').value.trim(),
     isOutsourced:document.getElementById('f-outsourced').checked,
     cost:parseInt(document.getElementById('f-cost').value)||0,
+    shareWithStudio:document.getElementById('f-share-studio').checked,
     pricing:{quotationItemId,amount:billingLinked?0:amount,addons:billingLinked?[]:_fAddons.filter(a=>a.qty>0).map(a=>({addonId:a.addonId,label:a.label,amount:a.amount,qty:a.qty}))},
     linkedToCaseId,
     invoiceId:existingInvoiceId,
@@ -4944,6 +5025,205 @@ function buildInvoicePdfHtml(inv,client){
       </div>
     </div>
   </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// ── CASHFLOW MODULE ────────────────────────────────
+// ═══════════════════════════════════════════════════
+// Cashflow filter state
+S.cashFilter={status:'all',expandedIds:new Set()};
+
+function setCashStatusFilter(s){
+  S.cashFilter.status=s;
+  document.querySelectorAll('.filter-pill[data-cash-status]').forEach(p=>p.classList.toggle('active',p.dataset.cashStatus===s));
+  renderCashflow();
+}
+function refreshCashFilters(){
+  const months=document.getElementById('cash-filter-month');
+  const clients=document.getElementById('cash-filter-client');
+  if(months){
+    const set=new Set();
+    invoiceList().forEach(inv=>{if(inv.billingMonth)set.add(inv.billingMonth);});
+    const sorted=[...set].sort().reverse();
+    const cur=months.value;
+    months.innerHTML='<option value="all">全部月份</option>'+sorted.map(m=>`<option value="${m}">${m.replace('-','/')}</option>`).join('');
+    if(cur)months.value=cur;
+  }
+  if(clients){
+    const cur=clients.value;
+    clients.innerHTML='<option value="all">全部客戶</option>'+clientList().map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    if(cur)clients.value=cur;
+  }
+}
+
+// Compute split for a single invoice. Returns {lines, totals}
+function computeInvoiceSplit(inv){
+  const items=inv.items||[];
+  const lines=items.map(it=>{
+    const sub=(it.defaultPrice||0)*(it.qty==null?1:it.qty);
+    const cs=it.sourceCaseId?S.cases[it.sourceCaseId]:null;
+    const cost=cs?(cs.cost||0):0;
+    const labor=cs?(cs.laborOwner||'齊'):'?';
+    // shareWithStudio: default true if undefined, only false when explicitly opted out
+    const shareStudio=cs?(cs.shareWithStudio!==false):true;
+    const net=Math.max(0,sub-cost);
+    let qiCut=0,wuCut=0,studioCut=0;
+    if(shareStudio){
+      // 70% to laborOwner, 30% to studio
+      const laborCut=Math.round(net*0.7);
+      studioCut=net-laborCut;
+      if(labor==='齊')qiCut=laborCut;
+      else if(labor==='巫')wuCut=laborCut;
+      else studioCut+=laborCut;  // unknown owner → all to studio
+    }else{
+      // 100% to laborOwner (after cost)
+      if(labor==='齊')qiCut=net;
+      else if(labor==='巫')wuCut=net;
+      else studioCut=net;
+    }
+    return {it,sub,cs,cost,labor,shareStudio,net,qiCut,wuCut,studioCut};
+  });
+  const totals=lines.reduce((acc,l)=>{
+    acc.sub+=l.sub;acc.cost+=l.cost;acc.net+=l.net;
+    acc.qi+=l.qiCut;acc.wu+=l.wuCut;acc.studio+=l.studioCut;
+    return acc;
+  },{sub:0,cost:0,net:0,qi:0,wu:0,studio:0});
+  return {lines,totals};
+}
+
+function renderCashflow(){
+  refreshCashFilters();
+  const list=document.getElementById('cash-list');
+  const empty=document.getElementById('cash-empty');
+  const summary=document.getElementById('cash-summary');
+  const countEl=document.getElementById('cash-count');
+  if(!list)return;
+  // Apply filters: only count sent + paid invoices (drafts excluded)
+  const monthSel=document.getElementById('cash-filter-month')?.value||'all';
+  const clientSel=document.getElementById('cash-filter-client')?.value||'all';
+  const statusSel=S.cashFilter.status;
+  let invs=invoiceList().filter(i=>i.status==='sent'||i.status==='paid');
+  if(monthSel!=='all')invs=invs.filter(i=>i.billingMonth===monthSel);
+  if(clientSel!=='all')invs=invs.filter(i=>i.clientId===clientSel);
+  if(statusSel!=='all')invs=invs.filter(i=>i.status===statusSel);
+  countEl.textContent=`${invs.length} 張`;
+  // Aggregate summary
+  const agg={sent:{count:0,amt:0},paid:{count:0,amt:0},qi:0,wu:0,studio:0,cost:0};
+  invs.forEach(inv=>{
+    if(inv.status==='sent'){agg.sent.count++;agg.sent.amt+=inv.total||0;}
+    else if(inv.status==='paid'){agg.paid.count++;agg.paid.amt+=inv.total||0;}
+    const split=computeInvoiceSplit(inv);
+    agg.qi+=split.totals.qi;
+    agg.wu+=split.totals.wu;
+    agg.studio+=split.totals.studio;
+    agg.cost+=split.totals.cost;
+  });
+  // Render summary cards
+  summary.innerHTML=`
+    <div class="cash-card pend">
+      <div class="lbl">⏳ 待收</div>
+      <div class="val orange">$${fmtMoney(agg.sent.amt)}</div>
+      <div class="sub">${agg.sent.count} 張 sent</div>
+    </div>
+    <div class="cash-card recv">
+      <div class="lbl">✅ 已收</div>
+      <div class="val green">$${fmtMoney(agg.paid.amt)}</div>
+      <div class="sub">${agg.paid.count} 張 paid</div>
+    </div>
+    <div class="cash-card paid">
+      <div class="lbl">💰 齊分潤</div>
+      <div class="val blue">$${fmtMoney(agg.qi)}</div>
+      <div class="sub">扣外包後 70%</div>
+    </div>
+    <div class="cash-card paid" style="border-color:#f0c878;background:#fff8ee">
+      <div class="lbl" style="color:#a86a00">💰 巫分潤</div>
+      <div class="val orange">$${fmtMoney(agg.wu)}</div>
+      <div class="sub">扣外包後 70%</div>
+    </div>
+    <div class="cash-card studio">
+      <div class="lbl">🏠 工作室分潤</div>
+      <div class="val gold">$${fmtMoney(agg.studio)}</div>
+      <div class="sub">扣外包後 30%</div>
+    </div>
+    ${agg.cost>0?`<div class="cash-card" style="border-color:#e8aaaa;background:#fde8e8">
+      <div class="lbl" style="color:#c53030">📤 外包成本</div>
+      <div class="val" style="color:#c53030">$${fmtMoney(agg.cost)}</div>
+      <div class="sub">已從淨額扣除</div>
+    </div>`:''}
+  `;
+  // Render invoice rows
+  if(!invs.length){list.innerHTML='';empty.style.display='flex';return;}
+  empty.style.display='none';
+  // Sort by month desc, then status (sent first), then createdAt
+  invs.sort((a,b)=>{
+    const m=(b.billingMonth||'').localeCompare(a.billingMonth||'');
+    if(m!==0)return m;
+    if(a.status!==b.status)return a.status==='sent'?-1:1;
+    return (b.createdAt||0)-(a.createdAt||0);
+  });
+  list.innerHTML=invs.map(inv=>{
+    const c=S.clients[inv.clientId];
+    const cName=c?c.name:'(客戶已刪除)';
+    const split=computeInvoiceSplit(inv);
+    const isExpanded=S.cashFilter.expandedIds.has(inv.id);
+    const linesHtml=split.lines.map(l=>{
+      const csTitle=l.cs?escHtml(l.cs.title||''):'<span class="cash-no-case">手動項目</span>';
+      const ssMark=l.shareStudio?'':'<span title="不與工作室分潤" style="color:#a86a00;font-size:.6rem;margin-left:4px">🚫🏠</span>';
+      return `<div class="cash-line">
+        <div class="lab">${escHtml(l.it.label||'')}<div class="who">${csTitle} · 負責: ${escHtml(l.labor)}${ssMark}</div></div>
+        <div class="num">$${fmtMoney(l.sub)}</div>
+        <div class="num cost">${l.cost?'-$'+fmtMoney(l.cost):'—'}</div>
+        <div class="num">$${fmtMoney(l.net)}</div>
+        <div class="num split-q">${l.qiCut?'$'+fmtMoney(l.qiCut):'—'}</div>
+        <div class="num split-w">${l.wuCut?'$'+fmtMoney(l.wuCut):'—'}</div>
+        <div class="num split-s">${l.studioCut?'$'+fmtMoney(l.studioCut):'—'}</div>
+      </div>`;
+    }).join('');
+    return `<div class="cash-row${isExpanded?' expanded':''}" data-id="${inv.id}">
+      <div class="cash-row-head" onclick="toggleCashRow('${inv.id}')">
+        <div class="ino">${escHtml(inv.invoiceNumber||'')}</div>
+        <div class="cli">${escHtml(cName)}<div style="font-size:.62rem;color:#888;font-family:'JetBrains Mono',monospace;margin-top:2px">${inv.billingMonth||''}</div></div>
+        <div class="mon">${(inv.items||[]).length} 項</div>
+        <div onclick="event.stopPropagation()">
+          <div class="cash-status-toggle">
+            <button class="${inv.status==='sent'?'active sent':''}" onclick="setInvoicePaymentStatus('${inv.id}','sent')">待收</button>
+            <button class="${inv.status==='paid'?'active paid':''}" onclick="setInvoicePaymentStatus('${inv.id}','paid')">已收</button>
+          </div>
+        </div>
+        <div class="amt">$${fmtMoney(inv.total||0)}</div>
+        <div class="chev">▶</div>
+      </div>
+      <div class="cash-row-detail">
+        <div class="cash-line cash-line-hdr">
+          <div>項目</div><div style="text-align:right">金額</div><div style="text-align:right">外包</div><div style="text-align:right">淨額</div><div style="text-align:right">齊</div><div style="text-align:right">巫</div><div style="text-align:right">工作室</div>
+        </div>
+        ${linesHtml}
+        <div class="cash-totals">
+          <div>合計</div>
+          <div class="num">$${fmtMoney(split.totals.sub)}</div>
+          <div class="num" style="color:#c53030">${split.totals.cost?'-$'+fmtMoney(split.totals.cost):'—'}</div>
+          <div class="num">$${fmtMoney(split.totals.net)}</div>
+          <div class="num" style="color:#1e4a80">$${fmtMoney(split.totals.qi)}</div>
+          <div class="num" style="color:#a86a00">$${fmtMoney(split.totals.wu)}</div>
+          <div class="num" style="color:#a08560">$${fmtMoney(split.totals.studio)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleCashRow(id){
+  if(S.cashFilter.expandedIds.has(id))S.cashFilter.expandedIds.delete(id);
+  else S.cashFilter.expandedIds.add(id);
+  renderCashflow();
+}
+function setInvoicePaymentStatus(id,status){
+  const inv=S.invoices[id];if(!inv)return;
+  if(!['sent','paid'].includes(status))return;
+  inv.status=status;
+  if(status==='paid')inv.paidAt=Date.now();
+  inv.updatedAt=Date.now();
+  saveInvoiceObj(inv);
+  toast(`已標記為「${status==='paid'?'已收款':'待收款'}」`);
 }
 
 // ═══════════════════════════════════════════════════
