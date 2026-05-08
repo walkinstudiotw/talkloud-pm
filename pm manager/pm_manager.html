@@ -175,6 +175,33 @@ body{display:flex;flex-direction:column}
 .ai-status.ok{color:#4dd87a}
 .ai-status.err{color:#e74c3c}
 
+/* INVOICE TAB */
+.inv-layout{display:grid;grid-template-columns:1fr;height:100%;overflow:hidden}
+.inv-layout.editing{grid-template-columns:minmax(280px,360px) minmax(320px,1fr) 540px}
+.inv-list-wrap{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #1f1f1f}
+.inv-editor-wrap{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #1f1f1f}
+.inv-editor-wrap{padding:0}
+#inv-editor{padding:14px 16px;overflow-y:auto;height:100%}
+.inv-list{display:flex;flex-direction:column;gap:8px;padding:10px 14px}
+.inv-card{background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:10px 14px;cursor:pointer;display:grid;grid-template-columns:90px 1fr auto;gap:10px;align-items:center;transition:all .12s}
+.inv-card:hover{border-color:#4dd87a;transform:translateY(-1px)}
+.inv-card.active{border-color:#4dd87a;background:#0e1410}
+.inv-card .ino{font-family:'JetBrains Mono',monospace;font-size:.78rem;color:#fff;font-weight:700}
+.inv-card .meta-block .ic{font-size:.82rem;color:#fff}
+.inv-card .meta-block .im{font-size:.66rem;color:#888;margin-top:2px;font-family:'JetBrains Mono',monospace}
+.inv-card .right-block{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.inv-card .amt{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:#7de89a;font-weight:700}
+.inv-status{font-size:.6rem;padding:2px 9px;border-radius:9px;font-weight:700;letter-spacing:.4px}
+.inv-status.draft{background:#3a1010;color:#e74c3c;border:1px solid #4a1a1a}
+.inv-status.sent{background:#0a1828;color:#5a9ae0;border:1px solid #1e4a80}
+.inv-status.paid{background:#0c2016;color:#4dd87a;border:1px solid #1e6038}
+.inv-list-empty{padding:48px 18px;text-align:center;color:#666;font-size:.85rem}
+.inv-meta-card{background:#0f1218;border:1px solid #2a2a2a;border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.inv-meta-card .form-group.full{grid-column:1/-1}
+.inv-meta-card .form-input,.inv-meta-card .form-textarea,.inv-meta-card .form-select{font-size:.78rem;padding:5px 8px}
+.inv-back-btn{background:none;border:1px solid #2a2a2a;color:#aaa;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.7rem;font-family:inherit;margin-bottom:8px}
+.inv-back-btn:hover{color:#fff;border-color:#888}
+
 /* QUOTATION TAB */
 .quote-layout{display:grid;grid-template-columns:minmax(360px,1fr) 540px;height:100%}
 .quote-layout.preview-off{grid-template-columns:1fr}
@@ -599,12 +626,45 @@ body{display:flex;flex-direction:column}
   </div>
 </div>
 
-<!-- TAB: INVOICES (placeholder) -->
+<!-- TAB: INVOICES -->
 <div class="tab-panel" id="tab-invoices">
-  <div class="placeholder-tab">
-    <div class="empty-icon">🧾</div>
-    <h2>Invoice 模組</h2>
-    <p>此分頁將於 Phase 2 完成。功能：按客戶 × 月份自動聚合案件 → 預覽 invoice → 產生 PDF → 寄送給客戶。</p>
+  <div class="inv-layout" id="inv-layout">
+    <div class="inv-list-wrap">
+      <div class="filter-bar">
+        <select class="form-select" id="inv-filter-month" onchange="renderInvoices()" style="width:120px;font-size:.72rem;padding:3px 24px 3px 8px">
+          <option value="all">全部月份</option>
+        </select>
+        <select class="form-select" id="inv-filter-client" onchange="renderInvoices()" style="width:140px;font-size:.72rem;padding:3px 24px 3px 8px">
+          <option value="all">全部客戶</option>
+        </select>
+        <button class="filter-pill active" data-inv-status="all" onclick="setInvoiceStatusFilter('all')">全部</button>
+        <button class="filter-pill" data-inv-status="draft" onclick="setInvoiceStatusFilter('draft')">草稿</button>
+        <button class="filter-pill" data-inv-status="sent" onclick="setInvoiceStatusFilter('sent')">已寄出</button>
+        <button class="filter-pill" data-inv-status="paid" onclick="setInvoiceStatusFilter('paid')">已收款</button>
+        <span class="spacer"></span>
+        <button class="nav-btn" onclick="generateMonthlyInvoices()" title="從本月已完成案件聚合產生">🗓 月底結算</button>
+        <button class="nav-btn primary" onclick="openCreateInvoice()">＋ 新增 Invoice</button>
+      </div>
+      <div class="scroll-body">
+        <div class="inv-list" id="inv-list"></div>
+      </div>
+    </div>
+    <div class="inv-editor-wrap" id="inv-editor-wrap" style="display:none">
+      <div id="inv-editor"></div>
+    </div>
+    <div class="quote-preview-wrap" id="inv-preview-wrap" style="display:none">
+      <div class="quote-preview-bar">
+        <span class="lbl">📄 Invoice PDF 預覽</span>
+        <div class="actions">
+          <button class="nav-btn" onclick="closeInvoiceEditor()" title="返回列表">⇤</button>
+          <button class="nav-btn export-btn" onclick="downloadInvoicePdf()" style="background:#2a1800;border-color:#6a3e00;color:#f0a030">⬇ 下載 PDF</button>
+          <button class="nav-btn" onclick="sendInvoiceViaWebhook()" title="透過 Apps Script Webhook 寄信" style="background:#0c2016;border-color:#1e6038;color:#4dd87a">✉ 寄出</button>
+        </div>
+      </div>
+      <div class="quote-preview-frame">
+        <div class="quote-preview-page" id="inv-preview-page"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -769,6 +829,17 @@ body{display:flex;flex-direction:column}
         <div class="form-group">
           <label class="form-label">統一編號</label>
           <input class="form-input" id="cl-taxid" placeholder="8 碼數字">
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:8px">
+        <div class="form-group">
+          <label class="form-label">Invoice 前綴代碼</label>
+          <input class="form-input" id="cl-invoice-prefix" placeholder="例：A、V、T（產生 Invoice 編號用）" maxlength="6" style="text-transform:uppercase">
+          <div style="font-size:.6rem;color:#666;margin-top:3px;line-height:1.4">Invoice 編號格式：<b>{前綴}-{年月}</b>（例：A-202604）</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">客戶寄送 Email</label>
+          <input class="form-input" id="cl-invoice-email" type="email" placeholder="例：finance@example.com（可與聯絡 Email 不同）">
         </div>
       </div>
       <div class="form-group full" style="margin-top:8px">
@@ -1022,6 +1093,15 @@ body{display:flex;flex-direction:column}
     </div>
 
     <div class="form-group full">
+      <label class="form-label">Apps Script Web App URL（Invoice 寄信用）</label>
+      <input class="form-input" id="set-webhook-url" type="text" placeholder="https://script.google.com/macros/s/.../exec">
+      <div style="font-size:.62rem;color:#666;margin-top:3px;line-height:1.5">
+        在 Apps Script 部署 Web App 後貼入網址（部署 → 新增部署 → Web 應用程式 → 任何人）。<br>
+        Apps Script 程式碼樣本：<b>pm_manager_appscript.gs</b>（與此 HTML 同目錄）
+      </div>
+    </div>
+
+    <div class="form-group full">
       <label class="form-label">Anthropic API Key（用於 AI 分析）</label>
       <input class="form-input" id="set-api-key" type="password" placeholder="sk-ant-...">
       <div style="font-size:.65rem;color:#666;margin-top:3px">儲存於瀏覽器 LocalStorage，不會上傳</div>
@@ -1036,6 +1116,92 @@ body{display:flex;flex-direction:column}
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeM('settings-modal')">取消</button>
       <button class="btn-primary" onclick="saveSettings()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICE CREATE MODAL -->
+<div class="modal-overlay" id="invoice-create-modal">
+  <div class="modal">
+    <div class="modal-title">🧾 新增 Invoice</div>
+    <div class="form-group">
+      <label class="form-label">客戶（節目）*</label>
+      <select class="form-select" id="inv-create-client" onchange="updateInvoicePreview()"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">帳單月份 *</label>
+      <input class="form-input" id="inv-create-month" type="month" oninput="updateInvoicePreview()">
+    </div>
+    <div id="inv-create-preview-box" style="background:#0c1a14;border:1px solid #1e6038;border-radius:8px;padding:10px 14px;margin-top:6px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:.7rem;color:#888">Invoice 編號將為</span>
+      <span id="inv-create-preview" style="font-family:'JetBrains Mono',monospace;color:#4dd87a;font-size:.95rem;font-weight:700">—</span>
+    </div>
+    <div id="inv-create-no-prefix-warn" style="display:none;background:#2a1a08;border:1px solid #6a3e00;border-radius:8px;padding:10px 14px;margin-top:6px;font-size:.72rem;color:#f0a030;line-height:1.55">
+      ⚠️ 此客戶尚未設定 Invoice 前綴。請先到「客戶」頁面編輯該客戶 → 「公司資料 / 開票資訊」→ 填入「Invoice 前綴代碼」。
+      <button class="nav-btn" onclick="goEditCurrentInvoiceClient()" style="display:block;margin-top:8px;font-size:.7rem">→ 前往編輯此客戶</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeM('invoice-create-modal')">取消</button>
+      <button class="btn-primary" id="inv-create-submit" onclick="confirmCreateInvoice()">建立</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICE ITEM MODAL -->
+<div class="modal-overlay" id="invoice-item-modal">
+  <div class="modal modal-lg">
+    <div class="modal-title">🧾 <span id="ii-modal-title">新增 Invoice 項目</span></div>
+    <div class="form-group full">
+      <label class="form-label">從工作項目庫選擇（或下方手動輸入）</label>
+      <input type="hidden" id="ii-from-master" value="">
+      <div class="qi-master-picker">
+        <button type="button" class="qi-master-trigger" id="ii-master-trigger" onclick="toggleIiMasterPicker()">
+          <span class="qi-master-trigger-text" id="ii-master-trigger-text">— 自訂輸入 —</span>
+          <span class="qi-master-trigger-arrow">▼</span>
+        </button>
+        <div class="qi-master-panel" id="ii-master-panel" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-group full">
+      <label class="form-label">項目名稱 *</label>
+      <input class="form-input" id="ii-label" placeholder="例：EP25 Mad Feelings 後製">
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label class="form-label">服務類別</label>
+        <input class="form-input" id="ii-category" placeholder="例：Podcast">
+      </div>
+      <div class="form-group">
+        <label class="form-label">單價（元）</label>
+        <input class="form-input" id="ii-price" type="number" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label class="form-label">數量 / 單位</label>
+        <div style="display:flex;gap:5px">
+          <input class="form-input" id="ii-qty" type="number" placeholder="1" value="1" style="flex:1">
+          <input class="form-input" id="ii-unit" placeholder="集" style="width:50px;text-align:center">
+        </div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeM('invoice-item-modal')">取消</button>
+      <button class="btn-primary" onclick="saveInvoiceItemFromModal()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVOICE MONTHLY GENERATE MODAL -->
+<div class="modal-overlay" id="invoice-monthly-modal">
+  <div class="modal">
+    <div class="modal-title">🗓 月底結算 — 從已完成案件聚合</div>
+    <p style="font-size:.78rem;color:#888;margin:0 0 12px;line-height:1.5">會掃描該月份內所有「已完成」且尚未開過 Invoice 的案件，依客戶分組產生 draft Invoice。</p>
+    <div class="form-group">
+      <label class="form-label">結算月份 *</label>
+      <input class="form-input" id="inv-monthly-month" type="month">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeM('invoice-monthly-modal')">取消</button>
+      <button class="btn-primary" onclick="confirmGenerateMonthlyInvoices()">產生</button>
     </div>
   </div>
 </div>
@@ -1073,6 +1239,10 @@ const S={
   clients:{},          // {id: {id,name,contactName,email,accountInfo,quotation:{items:[]}}}
   cases:{},            // {id: {id,clientId,title,type,dueDate,...,status}}
   workItems:{},        // {id: {id,label,category,defaultPrice}} — master library
+  invoices:{},         // {id: {id,invoiceNumber,clientId,billingMonth,items,status,...}}
+  invoiceFilter:{month:'all',client:'all',status:'all'},
+  invoiceViewMode:'list',  // 'list' | 'editor'
+  selectedInvoiceId:null,
   cf:{status:'all',client:'all',month:'all',search:''},
   wiSearch:'',
   wiSelectedCategory:'all',          // 'all' | category name
@@ -1127,6 +1297,10 @@ function initFirebase(){
     if(_orphanScanTimer)clearTimeout(_orphanScanTimer);
     _orphanScanTimer=setTimeout(autoPromoteOrphanQuoteItems,800);
   });
+  _db.ref(`${ROOT}/invoices`).on('value',snap=>{
+    S.invoices=snap.val()||{};
+    renderCurrentTab();
+  });
   _db.ref(`${ROOT}/settings`).on('value',snap=>{
     S.globalSettings=snap.val()||{logoDataUrl:null};
     // refresh PDF preview if quotation tab visible
@@ -1173,6 +1347,36 @@ function deleteWorkItemObj(id){
   _db.ref(`${ROOT}/workItems/${id}`).remove();
 }
 function workItemList(){return Object.values(S.workItems).sort((a,b)=>(a.label||'').localeCompare(b.label||'','zh-TW'));}
+function saveInvoiceObj(inv){
+  if(!_fbReady)return;
+  _db.ref(`${ROOT}/invoices/${inv.id}`).set(inv);
+}
+function deleteInvoiceObj(id){
+  _db.ref(`${ROOT}/invoices/${id}`).remove();
+}
+function invoiceList(){return Object.values(S.invoices||{}).sort((a,b)=>(b.issuedAt||0)-(a.issuedAt||0));}
+// Generate next invoice number for {prefix}-{YYYYMM} (auto serial -2, -3 if duplicates exist)
+function nextInvoiceNumber(prefix,billingMonth){
+  const base=`${(prefix||'INV').toUpperCase()}-${billingMonth.replace('-','')}`;
+  const existing=invoiceList().filter(inv=>inv.invoiceNumber&&inv.invoiceNumber.startsWith(base));
+  if(existing.length===0)return base;
+  // find highest -N suffix
+  let maxSerial=1;
+  existing.forEach(inv=>{
+    if(inv.invoiceNumber===base){maxSerial=Math.max(maxSerial,1);}
+    const m=inv.invoiceNumber.match(/-(\d+)$/);
+    if(m)maxSerial=Math.max(maxSerial,parseInt(m[1])||0);
+  });
+  return `${base}-${maxSerial+1}`;
+}
+function ensureInvoice(inv){
+  if(!inv.items)inv.items=[];
+  if(!inv.status)inv.status='draft';
+  if(inv.taxRate==null)inv.taxRate=0;
+  if(!inv.serviceNotes)inv.serviceNotes='';
+  if(!inv.terms)inv.terms='';
+  if(inv.showSignature==null)inv.showSignature=true;
+}
 
 // ── HELPERS ────────────────────────────────────────
 const uid=()=>crypto.randomUUID();
@@ -1261,6 +1465,7 @@ function renderCurrentTab(){
   else if(n==='clients')renderClients();
   else if(n==='workitems')renderWorkItems();
   else if(n==='quotations')renderQuotations();
+  else if(n==='invoices')renderInvoices();
 }
 document.querySelectorAll('.sb-item[data-tab]').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
 
@@ -1493,7 +1698,7 @@ function openAddClient(){
   S.editClientId=null;
   document.getElementById('client-modal-title').textContent='新增客戶';
   document.getElementById('cl-del-btn').style.display='none';
-  ['cl-name','cl-contact','cl-phone','cl-company','cl-taxid','cl-email','cl-account'].forEach(id=>document.getElementById(id).value='');
+  ['cl-name','cl-contact','cl-phone','cl-company','cl-taxid','cl-email','cl-account','cl-invoice-prefix','cl-invoice-email'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   openM('client-modal');
 }
 function openEditClient(id){
@@ -1508,6 +1713,8 @@ function openEditClient(id){
   document.getElementById('cl-taxid').value=c.taxId||'';
   document.getElementById('cl-email').value=c.email||'';
   document.getElementById('cl-account').value=c.accountInfo||'';
+  const ip=document.getElementById('cl-invoice-prefix');if(ip)ip.value=c.invoicePrefix||'';
+  const ie=document.getElementById('cl-invoice-email');if(ie)ie.value=c.invoiceEmail||'';
   openM('client-modal');
 }
 function saveClient(){
@@ -1523,6 +1730,8 @@ function saveClient(){
     taxId:document.getElementById('cl-taxid').value.trim(),
     email:document.getElementById('cl-email').value.trim(),
     accountInfo:document.getElementById('cl-account').value.trim(),
+    invoicePrefix:(document.getElementById('cl-invoice-prefix')?.value||'').trim().toUpperCase(),
+    invoiceEmail:(document.getElementById('cl-invoice-email')?.value||'').trim(),
     quotation:existing.quotation||{items:[],updatedAt:Date.now()},
   };
   saveClientObj(c);
@@ -2777,6 +2986,8 @@ function openSettings(){
   document.getElementById('set-co-phone').value=co.phone??'0919987268';
   document.getElementById('set-co-email').value=co.email??'walkinstudiotw@gmail.com';
   document.getElementById('set-co-payment').value=co.paymentInfo??'';
+  const wh=document.getElementById('set-webhook-url');
+  if(wh)wh.value=S.globalSettings?.appsScriptWebhookUrl??'';
   refreshLogoPreview();
   refreshStampPreviews();
   openM('settings-modal');
@@ -2876,7 +3087,11 @@ function saveSettings(){
     email:document.getElementById('set-co-email').value.trim(),
     paymentInfo:document.getElementById('set-co-payment').value.trim(),
   };
-  _db.ref(`${ROOT}/settings/company`).set(company).then(()=>{
+  const webhookUrl=document.getElementById('set-webhook-url')?.value?.trim()||'';
+  Promise.all([
+    _db.ref(`${ROOT}/settings/company`).set(company),
+    _db.ref(`${ROOT}/settings/appsScriptWebhookUrl`).set(webhookUrl),
+  ]).then(()=>{
     closeM('settings-modal');toast('設定已儲存');
   }).catch(()=>{
     closeM('settings-modal');toast('本地儲存成功，雲端同步失敗',true);
@@ -2976,7 +3191,708 @@ function fillCaseFormFromAi(p){
   if(p.notes)document.getElementById('f-notes').value=p.notes;
 }
 
+// ═══════════════════════════════════════════════════
+// ── INVOICE MODULE ─────────────────────────────────
+// ═══════════════════════════════════════════════════
+
+function setInvoiceStatusFilter(status){
+  S.invoiceFilter.status=status;
+  document.querySelectorAll('.filter-pill[data-inv-status]').forEach(p=>p.classList.toggle('active',p.dataset.invStatus===status));
+  renderInvoices();
+}
+function refreshInvoiceFilters(){
+  // populate month + client dropdowns
+  const monthsSel=document.getElementById('inv-filter-month');
+  const clientsSel=document.getElementById('inv-filter-client');
+  if(monthsSel){
+    const months=new Set();
+    invoiceList().forEach(inv=>{if(inv.billingMonth)months.add(inv.billingMonth);});
+    const sorted=[...months].sort().reverse();
+    const cur=monthsSel.value;
+    monthsSel.innerHTML='<option value="all">全部月份</option>'+sorted.map(m=>`<option value="${m}">${m.replace('-','/')}</option>`).join('');
+    if(cur)monthsSel.value=cur;
+  }
+  if(clientsSel){
+    const cur=clientsSel.value;
+    clientsSel.innerHTML='<option value="all">全部客戶</option>'+clientList().map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
+    if(cur)clientsSel.value=cur;
+  }
+}
+function renderInvoices(){
+  refreshInvoiceFilters();
+  const list=document.getElementById('inv-list');
+  if(!list)return;
+  const layout=document.getElementById('inv-layout');
+  layout.classList.toggle('editing',S.invoiceViewMode==='editor');
+  document.getElementById('inv-editor-wrap').style.display=S.invoiceViewMode==='editor'?'flex':'none';
+  document.getElementById('inv-preview-wrap').style.display=S.invoiceViewMode==='editor'?'flex':'none';
+  // Apply filters
+  const monthSel=document.getElementById('inv-filter-month')?.value||'all';
+  const clientSel=document.getElementById('inv-filter-client')?.value||'all';
+  let arr=invoiceList();
+  if(S.invoiceFilter.status!=='all')arr=arr.filter(i=>i.status===S.invoiceFilter.status);
+  if(monthSel!=='all')arr=arr.filter(i=>i.billingMonth===monthSel);
+  if(clientSel!=='all')arr=arr.filter(i=>i.clientId===clientSel);
+  if(!arr.length){
+    list.innerHTML=`<div class="inv-list-empty">
+      <div style="font-size:2.2rem;margin-bottom:8px">🧾</div>
+      <div>沒有符合條件的 Invoice</div>
+      <div style="font-size:.65rem;margin-top:6px;color:#444">點上方「🗓 月底結算」聚合本月已完成案件，或「＋ 新增」手動建立</div>
+    </div>`;
+  }else{
+    list.innerHTML=arr.map(inv=>{
+      const c=S.clients[inv.clientId];
+      const cName=c?c.name:'（客戶已刪除）';
+      const isActive=inv.id===S.selectedInvoiceId?' active':'';
+      const statusLabel={draft:'草稿',sent:'已寄出',paid:'已收款'}[inv.status]||'';
+      return `<div class="inv-card${isActive}" onclick="openInvoiceEditor('${inv.id}')">
+        <div class="ino">${escHtml(inv.invoiceNumber||'—')}</div>
+        <div class="meta-block">
+          <div class="ic">${escHtml(cName)}</div>
+          <div class="im">${escHtml(inv.billingMonth||'')} · ${(inv.items||[]).length} 項</div>
+        </div>
+        <div class="right-block">
+          <div class="amt">$${fmtMoney(inv.total||0)}</div>
+          <div class="inv-status ${inv.status||'draft'}">${statusLabel}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  // If in editor mode, render the editor
+  if(S.invoiceViewMode==='editor'&&S.selectedInvoiceId){
+    renderInvoiceEditor();
+    renderInvoicePreview();
+  }
+}
+
+function openCreateInvoice(){
+  const clients=clientList();
+  if(!clients.length){toast('請先建立客戶',true);return;}
+  const sel=document.getElementById('inv-create-client');
+  sel.innerHTML=clients.map(c=>`<option value="${c.id}">${escHtml(c.name)}${c.invoicePrefix?` · ${escHtml(c.invoicePrefix)}`:' · ⚠️ 未設定前綴'}</option>`).join('');
+  const today=new Date();
+  document.getElementById('inv-create-month').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  updateInvoicePreview();
+  openM('invoice-create-modal');
+}
+function updateInvoicePreview(){
+  const cid=document.getElementById('inv-create-client').value;
+  const c=S.clients[cid];
+  const month=document.getElementById('inv-create-month').value||'YYYY-MM';
+  const previewBox=document.getElementById('inv-create-preview-box');
+  const warnBox=document.getElementById('inv-create-no-prefix-warn');
+  const submitBtn=document.getElementById('inv-create-submit');
+  if(!c||!c.invoicePrefix||!c.invoicePrefix.trim()){
+    previewBox.style.display='none';
+    warnBox.style.display='block';
+    submitBtn.disabled=true;
+    submitBtn.style.opacity='.4';
+    submitBtn.style.cursor='not-allowed';
+    return;
+  }
+  previewBox.style.display='flex';
+  warnBox.style.display='none';
+  submitBtn.disabled=false;
+  submitBtn.style.opacity='';
+  submitBtn.style.cursor='';
+  const num=nextInvoiceNumber(c.invoicePrefix,month);
+  document.getElementById('inv-create-preview').textContent=num;
+}
+function goEditCurrentInvoiceClient(){
+  const cid=document.getElementById('inv-create-client').value;
+  if(!cid)return;
+  closeM('invoice-create-modal');
+  openEditClient(cid);
+}
+function confirmCreateInvoice(){
+  const clientId=document.getElementById('inv-create-client').value;
+  const month=document.getElementById('inv-create-month').value;
+  if(!clientId){toast('請選擇客戶',true);return;}
+  if(!month||!/^\d{4}-\d{2}$/.test(month)){toast('請選擇月份',true);return;}
+  const c=S.clients[clientId];
+  if(!c||!c.invoicePrefix||!c.invoicePrefix.trim()){
+    toast('請先在客戶頁面設定 Invoice 前綴',true);return;
+  }
+  closeM('invoice-create-modal');
+  createBlankInvoice(clientId,month);
+}
+function createBlankInvoice(clientId,billingMonth,prefixOverride){
+  const c=S.clients[clientId];
+  if(!c){toast('客戶不存在',true);return;}
+  const prefix=prefixOverride||c.invoicePrefix||c.name.charAt(0)||'INV';
+  const id=uid();
+  const issuedAt=Date.now();
+  const due=new Date();due.setDate(due.getDate()+30);
+  const inv={
+    id,
+    invoiceNumber:nextInvoiceNumber(prefix,billingMonth),
+    clientId,
+    billingMonth,
+    issuedAt,
+    issuedDate:`${new Date(issuedAt).getFullYear()}/${String(new Date(issuedAt).getMonth()+1).padStart(2,'0')}/${String(new Date(issuedAt).getDate()).padStart(2,'0')}`,
+    dueDate:`${due.getFullYear()}/${String(due.getMonth()+1).padStart(2,'0')}/${String(due.getDate()).padStart(2,'0')}`,
+    status:'draft',
+    items:[],
+    taxRate:0,
+    serviceNotes:'',
+    terms:'',
+    showSignature:true,
+    total:0,
+    createdAt:Date.now(),
+    updatedAt:Date.now(),
+  };
+  saveInvoiceObj(inv);
+  S.selectedInvoiceId=id;
+  S.invoiceViewMode='editor';
+  setTimeout(renderInvoices,400);
+  toast(`已建立 Invoice ${inv.invoiceNumber}`);
+}
+function openInvoiceEditor(id){
+  S.selectedInvoiceId=id;
+  S.invoiceViewMode='editor';
+  renderInvoices();
+}
+function closeInvoiceEditor(){
+  S.invoiceViewMode='list';
+  S.selectedInvoiceId=null;
+  renderInvoices();
+}
+
+// ── GENERATE MONTHLY INVOICES FROM CASES ──
+function generateMonthlyInvoices(){
+  const today=new Date();
+  document.getElementById('inv-monthly-month').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  openM('invoice-monthly-modal');
+}
+function confirmGenerateMonthlyInvoices(){
+  const month=document.getElementById('inv-monthly-month').value;
+  if(!month||!/^\d{4}-\d{2}$/.test(month)){toast('請選擇月份',true);return;}
+  closeM('invoice-monthly-modal');
+  doGenerateMonthlyInvoices(month);
+}
+function doGenerateMonthlyInvoices(month){
+  // Group completed cases by client for that month (status==='done' AND case has dueDate in month AND not yet invoiced)
+  const groups=new Map();
+  Object.values(S.cases).forEach(cs=>{
+    if(cs.status!=='done')return;
+    if(!cs.dueDate||!cs.dueDate.startsWith(month))return;
+    if(cs.invoiceId)return; // already invoiced
+    if(!cs.clientId)return;
+    const arr=groups.get(cs.clientId)||[];
+    arr.push(cs);
+    groups.set(cs.clientId,arr);
+  });
+  if(groups.size===0){toast(`${month} 沒有符合的已完成案件`,true);return;}
+  let createdCount=0;
+  const skipped=[];
+  groups.forEach((cases,cid)=>{
+    const c=S.clients[cid];
+    if(!c)return;
+    if(!c.invoicePrefix||!c.invoicePrefix.trim()){
+      skipped.push(c.name);
+      return;
+    }
+    const prefix=c.invoicePrefix;
+    const id=uid();
+    const issuedAt=Date.now();
+    const due=new Date();due.setDate(due.getDate()+30);
+    const items=cases.map(cs=>({
+      itemId:uid(),
+      sourceCaseId:cs.id,
+      label:cs.title||'',
+      category:cs.type||'',
+      defaultPrice:cs.pricing?.amount||0,
+      qty:1,
+      unit:'集',
+    }));
+    const subtotal=items.reduce((s,i)=>s+i.defaultPrice*(i.qty||1),0);
+    const inv={
+      id,
+      invoiceNumber:nextInvoiceNumber(prefix,month),
+      clientId:cid,
+      billingMonth:month,
+      issuedAt,
+      issuedDate:`${new Date(issuedAt).getFullYear()}/${String(new Date(issuedAt).getMonth()+1).padStart(2,'0')}/${String(new Date(issuedAt).getDate()).padStart(2,'0')}`,
+      dueDate:`${due.getFullYear()}/${String(due.getMonth()+1).padStart(2,'0')}/${String(due.getDate()).padStart(2,'0')}`,
+      status:'draft',
+      items,
+      taxRate:0,
+      serviceNotes:'',
+      terms:'',
+      showSignature:true,
+      total:subtotal,
+      createdAt:Date.now(),
+      updatedAt:Date.now(),
+      sourceCaseIds:cases.map(cs=>cs.id),
+    };
+    saveInvoiceObj(inv);
+    // Mark cases as invoiced
+    cases.forEach(cs=>{cs.invoiceId=id;saveCaseObj(cs);});
+    createdCount++;
+  });
+  if(skipped.length){
+    toast(`✅ 已生成 ${createdCount} 張，⚠️ 跳過 ${skipped.length} 個未設前綴的客戶：${skipped.join('、')}`,true);
+  }else{
+    toast(`✅ ${month} 已生成 ${createdCount} 張 Invoice`);
+  }
+}
+
+// ── INVOICE EDITOR ──
+function calcInvoiceTotal(inv){
+  const subtotal=inv.items.reduce((s,i)=>s+(i.defaultPrice||0)*(i.qty==null?1:i.qty),0);
+  const taxRate=inv.taxRate||0;
+  const tax=Math.round(subtotal*taxRate/100);
+  const total=subtotal+tax;
+  return {subtotal,taxRate,tax,total};
+}
+function renderInvoiceEditor(){
+  const editor=document.getElementById('inv-editor');
+  if(!editor)return;
+  // Preserve focus during typing
+  const focused=document.activeElement;
+  if(editor.contains(focused)&&(focused.tagName==='INPUT'||focused.tagName==='TEXTAREA')){
+    renderInvoicePreview();
+    return;
+  }
+  const inv=S.invoices[S.selectedInvoiceId];
+  if(!inv){closeInvoiceEditor();return;}
+  ensureInvoice(inv);
+  const c=S.clients[inv.clientId];
+  const t=calcInvoiceTotal(inv);
+  inv.total=t.total;
+  editor.innerHTML=`
+    <button class="inv-back-btn" onclick="closeInvoiceEditor()">← 返回列表</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="font-size:.95rem;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace">🧾 ${escHtml(inv.invoiceNumber||'')}</div>
+      <span class="inv-status ${inv.status}">${({draft:'草稿',sent:'已寄出',paid:'已收款'})[inv.status]||''}</span>
+      <span class="spacer"></span>
+      <button class="nav-btn del" onclick="confirmDelInvoice('${inv.id}')" style="background:#3a1010;border-color:#5a1a1a;color:#e74c3c">🗑️ 刪除</button>
+    </div>
+    <div class="inv-meta-card">
+      <div class="form-group">
+        <label class="form-label">客戶</label>
+        <div style="font-size:.82rem;padding:5px 8px;color:#fff;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px">${escHtml(c?.name||'（客戶已刪除）')}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">帳單月份</label>
+        <input class="form-input" type="month" value="${inv.billingMonth}" onchange="updateInvoiceField('billingMonth',this.value)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">開立日</label>
+        <input class="form-input" type="text" value="${escHtml(inv.issuedDate||'')}" oninput="updateInvoiceField('issuedDate',this.value)" placeholder="YYYY/MM/DD">
+      </div>
+      <div class="form-group">
+        <label class="form-label">付款期限</label>
+        <input class="form-input" type="text" value="${escHtml(inv.dueDate||'')}" oninput="updateInvoiceField('dueDate',this.value)" placeholder="YYYY/MM/DD">
+      </div>
+      <div class="form-group">
+        <label class="form-label">稅率 (%)</label>
+        <input class="form-input" type="number" value="${inv.taxRate||0}" oninput="updateInvoiceField('taxRate',parseInt(this.value)||0)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">狀態</label>
+        <select class="form-select" onchange="updateInvoiceField('status',this.value)">
+          <option value="draft" ${inv.status==='draft'?'selected':''}>草稿</option>
+          <option value="sent" ${inv.status==='sent'?'selected':''}>已寄出</option>
+          <option value="paid" ${inv.status==='paid'?'selected':''}>已收款</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">備註（顯示在 PDF 條款區）</label>
+        <textarea class="form-textarea" rows="2" oninput="updateInvoiceField('terms',this.value)" placeholder="例：付款請於 30 日內完成、發票將於收款後寄送">${escHtml(inv.terms||'')}</textarea>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin:10px 0 6px">
+      <span style="font-size:.78rem;font-weight:700;color:#aaa">項目（${inv.items.length} 項）</span>
+      <span class="spacer"></span>
+      <button class="nav-btn primary" onclick="addInvoiceItem()" style="font-size:.7rem;padding:3px 10px">＋ 加項目</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      ${inv.items.length===0?'<div style="padding:14px;text-align:center;color:#666;font-size:.74rem;border:1px dashed #2a2a2a;border-radius:6px">尚無項目</div>':
+        inv.items.map((it,idx)=>{
+          const qty=it.qty==null?1:it.qty;
+          const sub=(it.defaultPrice||0)*qty;
+          return `<div style="display:grid;grid-template-columns:1fr 80px 50px 60px 80px 24px;gap:6px;align-items:center;padding:5px 6px;background:#0e0e0e;border:1px solid #1f1f1f;border-radius:6px;font-size:.74rem">
+            <input type="text" value="${escHtml(it.label)}" oninput="updateInvoiceItemField(${idx},'label',this.value)" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:3px 6px;color:#fff;font-family:inherit;font-size:.74rem;outline:none">
+            <input type="number" value="${it.defaultPrice||0}" oninput="updateInvoiceItemField(${idx},'defaultPrice',parseInt(this.value)||0)" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:3px 6px;color:#7de89a;font-family:'JetBrains Mono',monospace;font-size:.72rem;text-align:right;outline:none">
+            <input type="number" value="${qty}" oninput="updateInvoiceItemField(${idx},'qty',parseInt(this.value)||0)" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:3px 6px;color:#ccc;font-family:'JetBrains Mono',monospace;font-size:.72rem;text-align:center;outline:none">
+            <input type="text" value="${escHtml(it.unit||'')}" oninput="updateInvoiceItemField(${idx},'unit',this.value)" placeholder="單位" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:3px 6px;color:#ccc;font-family:inherit;font-size:.72rem;text-align:center;outline:none">
+            <div style="text-align:right;color:#7de89a;font-family:'JetBrains Mono',monospace;font-size:.74rem">$${fmtMoney(sub)}</div>
+            <button class="act-btn del" onclick="delInvoiceItem(${idx})" title="刪除">✕</button>
+          </div>`;
+        }).join('')}
+    </div>
+    <div style="margin-top:14px;padding:10px 14px;background:#0c2016;border:1px solid #1e6038;border-radius:8px;display:flex;align-items:center;justify-content:space-between">
+      <span style="color:#aaa;font-size:.78rem">Subtotal · Tax ${t.taxRate}% · <b style="color:#4dd87a">Total</b></span>
+      <span style="font-family:'JetBrains Mono',monospace;color:#4dd87a;font-size:1rem;font-weight:700">$${fmtMoney(t.total)}</span>
+    </div>
+  `;
+}
+function recomputeInvoiceTotal(inv){
+  inv.total=calcInvoiceTotal(inv).total;
+}
+function updateInvoiceField(field,val){
+  const inv=S.invoices[S.selectedInvoiceId];if(!inv)return;
+  inv[field]=val;
+  inv.updatedAt=Date.now();
+  recomputeInvoiceTotal(inv);
+  saveInvoiceObj(inv);
+  renderInvoicePreview();
+}
+function addInvoiceItem(){
+  // Open modal so user can pick from work items library or type custom
+  openAddInvoiceItem();
+}
+function openAddInvoiceItem(){
+  // Reset modal fields
+  document.getElementById('ii-modal-title').textContent='新增 Invoice 項目';
+  document.getElementById('ii-from-master').value='';
+  document.getElementById('ii-master-trigger-text').textContent='— 自訂輸入 —';
+  document.getElementById('ii-label').value='';
+  document.getElementById('ii-category').value='';
+  document.getElementById('ii-price').value='';
+  document.getElementById('ii-qty').value=1;
+  document.getElementById('ii-unit').value='集';
+  document.getElementById('ii-master-panel').style.display='none';
+  openM('invoice-item-modal');
+  // Focus label after a tick
+  setTimeout(()=>document.getElementById('ii-label').focus(),50);
+}
+function refreshIiMasterDropdown(){
+  const panel=document.getElementById('ii-master-panel');
+  const list=workItemList();
+  // Skip bundles for invoice (invoices use flat items)
+  const regular=list.filter(w=>!w.isBundle);
+  const byCategory=new Map();
+  regular.forEach(w=>{
+    const cat=(w.category||'').trim()||'未分類';
+    if(!byCategory.has(cat))byCategory.set(cat,[]);
+    byCategory.get(cat).push(w);
+  });
+  const sortedCats=[...byCategory.keys()].sort((a,b)=>a.localeCompare(b,'zh-TW'));
+  const currentVal=document.getElementById('ii-from-master').value;
+  let html=`<div class="qi-master-opt custom${currentVal===''?' selected':''}" onclick="setIiMaster('','— 自訂輸入 —')">— 自訂輸入 —</div>`;
+  sortedCats.forEach(cat=>{
+    html+=`<div class="qi-master-group-title">${escHtml(cat)}</div>`+
+      byCategory.get(cat).map(w=>`<div class="qi-master-opt${currentVal===w.id?' selected':''}" onclick="setIiMaster('${w.id}','${escAttr(w.label)}')">
+        <span>${escHtml(w.label)}</span><span class="price">$${fmtMoney(w.defaultPrice)}</span>
+      </div>`).join('');
+  });
+  panel.innerHTML=html;
+}
+function toggleIiMasterPicker(){
+  const panel=document.getElementById('ii-master-panel');
+  const trig=document.getElementById('ii-master-trigger');
+  const isOpen=panel.style.display==='block';
+  if(isOpen){
+    panel.style.display='none';
+    trig.classList.remove('open');
+  }else{
+    refreshIiMasterDropdown();
+    panel.style.display='block';
+    trig.classList.add('open');
+    setTimeout(()=>{
+      const handler=(e)=>{
+        if(!panel.contains(e.target)&&e.target!==trig&&!trig.contains(e.target)){
+          panel.style.display='none';
+          trig.classList.remove('open');
+          document.removeEventListener('click',handler);
+        }
+      };
+      document.addEventListener('click',handler);
+    },10);
+  }
+}
+function setIiMaster(wid,label){
+  document.getElementById('ii-from-master').value=wid;
+  document.getElementById('ii-master-trigger-text').textContent=wid?label:'— 自訂輸入 —';
+  document.getElementById('ii-master-panel').style.display='none';
+  document.getElementById('ii-master-trigger').classList.remove('open');
+  // Auto-fill fields from selected work item
+  if(wid){
+    const w=S.workItems[wid];
+    if(w){
+      document.getElementById('ii-label').value=w.label||'';
+      document.getElementById('ii-category').value=w.category||'';
+      document.getElementById('ii-price').value=w.defaultPrice||'';
+      document.getElementById('ii-unit').value=w.unit||'集';
+    }
+  }
+}
+function saveInvoiceItemFromModal(){
+  const inv=S.invoices[S.selectedInvoiceId];if(!inv){closeM('invoice-item-modal');return;}
+  const label=document.getElementById('ii-label').value.trim();
+  if(!label){toast('請輸入項目名稱',true);return;}
+  const wid=document.getElementById('ii-from-master').value;
+  inv.items=inv.items||[];
+  inv.items.push({
+    itemId:uid(),
+    label,
+    category:document.getElementById('ii-category').value.trim(),
+    defaultPrice:parseInt(document.getElementById('ii-price').value)||0,
+    qty:parseInt(document.getElementById('ii-qty').value)||1,
+    unit:document.getElementById('ii-unit').value.trim()||'集',
+    sourceWorkItemId:wid||null,
+  });
+  inv.updatedAt=Date.now();
+  recomputeInvoiceTotal(inv);
+  saveInvoiceObj(inv);
+  closeM('invoice-item-modal');
+  renderInvoiceEditor();renderInvoicePreview();
+}
+function updateInvoiceItemField(idx,field,val){
+  const inv=S.invoices[S.selectedInvoiceId];if(!inv)return;
+  if(!inv.items[idx])return;
+  inv.items[idx][field]=val;
+  inv.updatedAt=Date.now();
+  recomputeInvoiceTotal(inv);
+  saveInvoiceObj(inv);
+  renderInvoicePreview();
+}
+function delInvoiceItem(idx){
+  const inv=S.invoices[S.selectedInvoiceId];if(!inv)return;
+  inv.items.splice(idx,1);
+  inv.updatedAt=Date.now();
+  recomputeInvoiceTotal(inv);
+  saveInvoiceObj(inv);
+  renderInvoiceEditor();renderInvoicePreview();
+}
+function confirmDelInvoice(id){
+  const inv=S.invoices[id];if(!inv)return;
+  showConf('刪除 Invoice？',`「${inv.invoiceNumber}」將永久刪除（關聯案件的 invoice 標記也會清除）。`,()=>{
+    // Unmark source cases
+    (inv.sourceCaseIds||[]).forEach(csid=>{
+      const cs=S.cases[csid];
+      if(cs&&cs.invoiceId===id){cs.invoiceId=null;saveCaseObj(cs);}
+    });
+    deleteInvoiceObj(id);
+    closeInvoiceEditor();
+    toast('已刪除');
+  });
+}
+
+// ── INVOICE PREVIEW ──
+function renderInvoicePreview(){
+  const page=document.getElementById('inv-preview-page');
+  if(!page)return;
+  const inv=S.invoices[S.selectedInvoiceId];
+  if(!inv){page.innerHTML='';return;}
+  const client=S.clients[inv.clientId];
+  page.innerHTML=buildInvoicePdfHtml(inv,client);
+  fitInvoicePreviewScale();
+}
+function fitInvoicePreviewScale(){
+  const wrap=document.getElementById('inv-preview-wrap');
+  const page=document.getElementById('inv-preview-page');
+  if(!page||!wrap)return;
+  const avail=Math.max(360,wrap.clientWidth-28);
+  const scale=Math.min(1,avail/794);
+  page.style.transform=`scale(${scale})`;
+  page.style.width='794px';
+  const inner=page.firstElementChild;
+  if(inner){
+    page.style.height=(inner.offsetHeight*scale)+'px';
+  }
+}
+
+// ── INVOICE PDF DOWNLOAD ──
+async function downloadInvoicePdf(){
+  const inv=S.invoices[S.selectedInvoiceId];
+  if(!inv){toast('無 Invoice',true);return;}
+  if(!(inv.items||[]).length){toast('無項目，無法產生 PDF',true);return;}
+  const client=S.clients[inv.clientId];
+  toast('正在產生 PDF...');
+  const stage=document.getElementById('quote-pdf-stage');
+  stage.innerHTML=buildInvoicePdfHtml(inv,client);
+  const root=stage.firstElementChild;
+  root.style.width='794px';root.style.minHeight='auto';root.style.display='block';root.style.boxSizing='border-box';root.style.backgroundImage='none';
+  const pinned=root.querySelector('.qpdf-d-bottom-pinned');if(pinned)pinned.style.marginTop='0';
+  const dBody=root.querySelector('.qpdf-d-body');if(dBody){dBody.style.display='block';dBody.style.flex='none';}
+  const prev={pos:stage.style.position,left:stage.style.left,top:stage.style.top,opacity:stage.style.opacity,zIndex:stage.style.zIndex,pe:stage.style.pointerEvents};
+  stage.style.position='fixed';stage.style.left='0';stage.style.top='0';stage.style.opacity='0';stage.style.zIndex='-1';stage.style.pointerEvents='none';
+  const filename=`Invoice_${inv.invoiceNumber}_${client?.name||''}.pdf`;
+  try{
+    await html2pdf().set({
+      margin:[8,0,14,0],
+      filename,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:3,useCORS:true,backgroundColor:'#ffffff',letterRendering:true,windowWidth:794,x:0,y:0,scrollX:0,scrollY:0},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
+      pagebreak:{mode:['css','legacy'],avoid:['tr','.qpdf-totals','.qpdf-sign-block']},
+    }).from(root).save();
+    toast('✅ Invoice PDF 已下載');
+  }catch(e){
+    console.error(e);toast('PDF 失敗：'+e.message,true);
+  }finally{
+    Object.assign(stage.style,{position:prev.pos||'absolute',left:prev.left||'-99999px',top:prev.top||'0',opacity:prev.opacity||'',zIndex:prev.zIndex||'',pointerEvents:prev.pe||''});
+    stage.innerHTML='';
+  }
+}
+
+// ── SEND INVOICE VIA APPS SCRIPT WEBHOOK ──
+async function sendInvoiceViaWebhook(){
+  const inv=S.invoices[S.selectedInvoiceId];
+  if(!inv){toast('無 Invoice',true);return;}
+  const client=S.clients[inv.clientId];
+  if(!client){toast('客戶不存在',true);return;}
+  const webhookUrl=S.globalSettings?.appsScriptWebhookUrl;
+  if(!webhookUrl){
+    toast('請先在 ⚙️ 設定中填入 Apps Script Web App URL',true);
+    openSettings();return;
+  }
+  const to=client.invoiceEmail||client.email;
+  if(!to){toast('該客戶沒有 Email',true);return;}
+  toast('產生 PDF 並寄送中...');
+  // Build PDF as base64
+  const stage=document.getElementById('quote-pdf-stage');
+  stage.innerHTML=buildInvoicePdfHtml(inv,client);
+  const root=stage.firstElementChild;
+  root.style.width='794px';root.style.minHeight='auto';root.style.display='block';root.style.boxSizing='border-box';root.style.backgroundImage='none';
+  const pinned=root.querySelector('.qpdf-d-bottom-pinned');if(pinned)pinned.style.marginTop='0';
+  const dBody=root.querySelector('.qpdf-d-body');if(dBody){dBody.style.display='block';dBody.style.flex='none';}
+  const prev={pos:stage.style.position,left:stage.style.left,top:stage.style.top,opacity:stage.style.opacity,zIndex:stage.style.zIndex,pe:stage.style.pointerEvents};
+  stage.style.position='fixed';stage.style.left='0';stage.style.top='0';stage.style.opacity='0';stage.style.zIndex='-1';stage.style.pointerEvents='none';
+  try{
+    const blob=await html2pdf().set({
+      margin:[8,0,14,0],
+      image:{type:'jpeg',quality:0.95},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',letterRendering:true,windowWidth:794,x:0,y:0,scrollX:0,scrollY:0},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait',compress:true},
+      pagebreak:{mode:['css','legacy'],avoid:['tr','.qpdf-totals','.qpdf-sign-block']},
+    }).from(root).output('blob');
+    const reader=new FileReader();
+    const dataUrl=await new Promise((res,rej)=>{reader.onload=()=>res(reader.result);reader.onerror=rej;reader.readAsDataURL(blob);});
+    const base64=dataUrl.split(',')[1];
+    const payload={
+      to,
+      cc:'housecoworking.co@gmail.com',
+      subject:`Invoice ${inv.invoiceNumber} · ${client.name}`,
+      body:`Hi ${client.contactName||client.name}，\n\n附上 ${inv.billingMonth} 的請款明細，總額 $${fmtMoney(inv.total)}，付款期限 ${inv.dueDate}。\n如有問題請聯繫。\n\n——\nWalkIn Studio`,
+      pdfBase64:base64,
+      filename:`Invoice_${inv.invoiceNumber}.pdf`,
+    };
+    const resp=await fetch(webhookUrl,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain'}});
+    const result=await resp.json();
+    if(!result.ok)throw new Error(result.error||'Webhook 回傳失敗');
+    inv.status='sent';
+    inv.sentAt=Date.now();
+    inv.sentTo=to;
+    saveInvoiceObj(inv);
+    toast('✅ 已寄出，狀態更新為「已寄出」');
+  }catch(e){
+    console.error(e);toast('寄送失敗：'+e.message,true);
+  }finally{
+    Object.assign(stage.style,{position:prev.pos||'absolute',left:prev.left||'-99999px',top:prev.top||'0',opacity:prev.opacity||'',zIndex:prev.zIndex||'',pointerEvents:prev.pe||''});
+    stage.innerHTML='';
+  }
+}
+
+// ── INVOICE PDF TEMPLATE (reuses Template D structure with INVOICE branding) ──
+function buildInvoicePdfHtml(inv,client){
+  ensureInvoice(inv);
+  const url=logoUrl();
+  const co=getCompanyInfo();
+  const logoHtml=url?`<img src="${url}" alt="logo">`:`<div class="qpdf-d-logo-fallback">${escHtml(co.name).toUpperCase()}</div>`;
+  const items=inv.items||[];
+  const t=calcInvoiceTotal(inv);
+  const tbodyHtml=items.length===0
+    ?'<tr><td colspan="5" style="text-align:center;color:#888;padding:30px">尚無項目</td></tr>'
+    :items.map(it=>{
+      const qty=it.qty==null?1:it.qty;
+      const sub=(it.defaultPrice||0)*qty;
+      return `<tr>
+        <td>${escHtml(it.label)}</td>
+        <td class="right">$${fmtMoney(it.defaultPrice)}</td>
+        <td class="right">${qty}</td>
+        <td class="right" style="color:#666">${escHtml(it.unit||'—')}</td>
+        <td class="right">$${fmtMoney(sub)}</td>
+      </tr>`;
+    }).join('');
+  const totalsHtml=`<div class="qpdf-d-totals"><table>
+    <tr><td class="lbl">Subtotal</td><td class="val">$${fmtMoney(t.subtotal)}</td></tr>
+    ${t.taxRate>0?`<tr><td class="lbl">Tax ${t.taxRate}%</td><td class="val">$${fmtMoney(t.tax)}</td></tr>`:''}
+    <tr class="grand"><td class="lbl">Total</td><td class="val">$${fmtMoney(t.total)}</td></tr>
+  </table></div>`;
+  // terms — user lines + fixed law boilerplate
+  const userTermLines=(inv.terms||'').split(/\r?\n/).filter(l=>l.trim());
+  const allTerms=[...userTermLines,...FIXED_TERMS];
+  const termsHtml=`<div class="qpdf-d-terms-col">
+    <div class="lbl">付款備註</div>
+    <ol>${allTerms.map(l=>`<li>${escHtml(l)}</li>`).join('')}</ol>
+  </div>`;
+  const showPay=!!(co.paymentInfo&&co.paymentInfo.trim());
+  const payHtml=showPay?`<div class="qpdf-d-pay-col">
+    <div class="lbl">收款資訊 / Payment</div>
+    <div class="qpdf-d-pay-body">${escHtml(co.paymentInfo)}</div>
+  </div>`:'<div class="qpdf-d-pay-col"></div>';
+  const sigHtml=renderSignatureHtml(inv,{largeStamp:co.largeStamp,smallStamp:co.smallStamp});
+  const clientRows=[
+    {k:'聯絡人',v:client?.contactName},
+    {k:'電話',v:client?.contactPhone},
+    {k:'抬頭',v:client?.companyTitle||client?.name},
+    {k:'統一編號',v:client?.taxId},
+    {k:'Email',v:client?.invoiceEmail||client?.email},
+  ];
+  const clientHtml=clientRows.map(f=>{
+    const empty=!f.v||!String(f.v).trim();
+    return `<div class="row"><div class="k">${escHtml(f.k)}</div><div class="v${empty?' empty':''}">${empty?'—':escHtml(f.v)}</div></div>`;
+  }).join('');
+  return`<div class="qpdf qpdf-d">
+    <div class="qpdf-d-top">
+      <div class="qpdf-d-logo">${logoHtml}</div>
+      <div class="qpdf-d-meta">${escHtml(inv.issuedDate||todayStr())}</div>
+    </div>
+    <div class="qpdf-d-body">
+      <div class="qpdf-d-title-row">
+        <div class="qpdf-d-title" style="color:#a08560">INVOICE</div>
+        <div class="qpdf-d-title-meta">
+          <span>編號 <b>${escHtml(inv.invoiceNumber||'')}</b></span>
+          <span>開立日 <b>${escHtml(inv.issuedDate||todayStr())}</b></span>
+          <span>付款期限 <b>${escHtml(inv.dueDate||'')}</b></span>
+        </div>
+      </div>
+      <div class="qpdf-d-grid">
+        <div class="qpdf-d-block">
+          <div class="blk-lbl">From</div>
+          <div class="row"><div class="k">公司</div><div class="v">${escHtml(co.name)}</div></div>
+          <div class="row"><div class="k">聯絡人</div><div class="v">${escHtml(co.contact)}</div></div>
+          <div class="row"><div class="k">電話</div><div class="v">${escHtml(co.phone)}</div></div>
+          <div class="row"><div class="k">Email</div><div class="v">${escHtml(co.email)}</div></div>
+        </div>
+        <div class="qpdf-d-block">
+          <div class="blk-lbl">Bill To · ${escHtml(client?.name||'')}</div>
+          ${clientHtml}
+        </div>
+      </div>
+      <div class="qpdf-d-block" style="margin-bottom:14px">
+        <div class="blk-lbl">帳單月份</div>
+        <div class="pname">${escHtml(inv.billingMonth||'')} 服務請款</div>
+      </div>
+      <table class="qpdf-d-tbl">
+        <thead><tr>
+          <th class="left">項目</th>
+          <th class="right">單價</th>
+          <th class="right">數量</th>
+          <th class="right">單位</th>
+          <th class="right">小計</th>
+        </tr></thead>
+        <tbody>${tbodyHtml}</tbody>
+      </table>
+      ${totalsHtml}
+      <div class="qpdf-d-bottom-pinned">
+        <div class="qpdf-d-bottom-grid">
+          ${termsHtml}
+          ${payHtml}
+        </div>
+        ${sigHtml}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
 // ── QUOTATION PDF GENERATION ───────────────────────
+// ═══════════════════════════════════════════════════
 function buildQuotePdfHtml(client){
   ensureQuotation(client);
   return buildPdfTemplateD(client);
@@ -3246,7 +4162,10 @@ function fitPreviewScale(){
     page.style.height=(realH*scale)+'px';
   }
 }
-window.addEventListener('resize',()=>{if(document.querySelector('#tab-quotations.active'))fitPreviewScale();});
+window.addEventListener('resize',()=>{
+  if(document.querySelector('#tab-quotations.active'))fitPreviewScale();
+  if(document.querySelector('#tab-invoices.active'))fitInvoicePreviewScale();
+});
 
 function togglePreview(){
   const lay=document.getElementById('quote-layout');
