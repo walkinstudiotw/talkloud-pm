@@ -121,13 +121,21 @@ body{display:flex;flex-direction:column}
 .status-badge.editing{background:#e8f0fc;color:#1e4a80;border:1px solid #5a9ae0}
 .status-badge.done{background:#e8f5ec;color:#1e6038;border:1px solid #7de89a}
 
-/* STATUS DROPDOWN (case list) */
+/* STATUS DROPDOWN (case list) — legacy native select kept for invoice editor */
 .status-select{appearance:none;-webkit-appearance:none;border-radius:10px;font-size:.66rem;font-weight:700;padding:2px 22px 2px 9px;cursor:pointer;outline:none;font-family:inherit;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 11px) 8px,calc(100% - 7px) 8px;background-size:4px 4px;background-repeat:no-repeat;transition:filter .1s}
 .status-select:hover{filter:brightness(.96)}
 .status-select[data-status="todo"]{background-color:#fde8e8;color:#c53030;border:1px solid #e8aaaa}
 .status-select[data-status="doing"]{background-color:#fff4e6;color:#a86a00;border:1px solid #f0c878}
 .status-select[data-status="editing"]{background-color:#e8f0fc;color:#1e4a80;border:1px solid #5a9ae0}
 .status-select[data-status="done"]{background-color:#e8f5ec;color:#1e6038;border:1px solid #7de89a}
+
+/* CASE STATUS PILL (custom-picker version, used in case list) */
+.case-status-pill{border-radius:10px !important;font-size:.66rem !important;font-weight:700 !important;padding:2px 22px 2px 9px !important;width:auto !important}
+.case-status-pill[data-status="todo"]{background-color:#fde8e8;color:#c53030;border:1px solid #e8aaaa}
+.case-status-pill[data-status="doing"]{background-color:#fff4e6;color:#a86a00;border:1px solid #f0c878}
+.case-status-pill[data-status="editing"]{background-color:#e8f0fc;color:#1e4a80;border:1px solid #5a9ae0}
+.case-status-pill[data-status="done"]{background-color:#e8f5ec;color:#1e6038;border:1px solid #7de89a}
+.case-status-pill .qi-master-trigger-arrow{color:currentColor !important;opacity:.7}
 
 /* CASHFLOW TAB */
 .cash-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;padding:14px}
@@ -417,6 +425,10 @@ body{display:flex;flex-direction:column}
 .sub-row .x-btn:hover{color:#c53030}
 .sublist-empty{padding:10px;text-align:center;color:#555;font-size:.7rem}
 
+/* GLOBAL: any remaining native <select> uses small font + custom arrow + no native styling for closed state */
+select.form-select{font-size:.78rem;padding:5px 24px 5px 9px;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,#888 50%),linear-gradient(135deg,#888 50%,transparent 50%);background-position:calc(100% - 14px) 50%,calc(100% - 9px) 50%;background-size:5px 5px;background-repeat:no-repeat}
+select.form-select:focus{border-color:#666666}
+
 /* CASE MODAL — compact dropdowns/inputs to match the rest of the app */
 #case-modal .form-input,#case-modal .form-select,#case-modal .form-textarea{font-size:.78rem;padding:5px 9px}
 #case-modal .form-label{font-size:.66rem}
@@ -595,13 +607,15 @@ body{display:flex;flex-direction:column}
     <button class="filter-pill" data-cf-status="editing">修改中</button>
     <button class="filter-pill" data-cf-status="done">已完成</button>
     <div class="filter-sep"></div>
-    <select class="form-select" id="cf-client" onchange="renderCases()" style="width:160px;font-size:.72rem;padding:3px 24px 3px 8px">
-      <option value="all">全部客戶</option>
-    </select>
+    <input type="hidden" id="cf-client" value="all">
+    <div class="qi-master-picker" style="width:160px">
+      <button type="button" class="qi-master-trigger" id="cf-client-trigger"><span class="qi-master-trigger-text">全部客戶</span><span class="qi-master-trigger-arrow">▼</span></button>
+    </div>
     <div class="filter-sep"></div>
-    <select class="form-select" id="cf-month" onchange="renderCases()" style="width:130px;font-size:.72rem;padding:3px 24px 3px 8px">
-      <option value="all">全部月份</option>
-    </select>
+    <input type="hidden" id="cf-month" value="all">
+    <div class="qi-master-picker" style="width:130px">
+      <button type="button" class="qi-master-trigger" id="cf-month-trigger"><span class="qi-master-trigger-text">全部月份</span><span class="qi-master-trigger-arrow">▼</span></button>
+    </div>
     <div class="filter-sep"></div>
     <input class="filter-search" id="cf-search" placeholder="搜尋標題..." oninput="renderCases()">
     <span class="spacer"></span>
@@ -706,12 +720,14 @@ body{display:flex;flex-direction:column}
   <div class="inv-layout" id="inv-layout">
     <div class="inv-list-wrap">
       <div class="filter-bar">
-        <select class="form-select" id="inv-filter-month" onchange="renderInvoices()" style="width:120px;font-size:.72rem;padding:3px 24px 3px 8px">
-          <option value="all">全部月份</option>
-        </select>
-        <select class="form-select" id="inv-filter-client" onchange="renderInvoices()" style="width:140px;font-size:.72rem;padding:3px 24px 3px 8px">
-          <option value="all">全部客戶</option>
-        </select>
+        <input type="hidden" id="inv-filter-month" value="all">
+        <div class="qi-master-picker" style="width:120px">
+          <button type="button" class="qi-master-trigger" id="inv-filter-month-trigger"><span class="qi-master-trigger-text">全部月份</span><span class="qi-master-trigger-arrow">▼</span></button>
+        </div>
+        <input type="hidden" id="inv-filter-client" value="all">
+        <div class="qi-master-picker" style="width:140px">
+          <button type="button" class="qi-master-trigger" id="inv-filter-client-trigger"><span class="qi-master-trigger-text">全部客戶</span><span class="qi-master-trigger-arrow">▼</span></button>
+        </div>
         <button class="filter-pill active" data-inv-status="all" onclick="setInvoiceStatusFilter('all')">全部</button>
         <button class="filter-pill" data-inv-status="draft" onclick="setInvoiceStatusFilter('draft')">草稿</button>
         <button class="filter-pill" data-inv-status="sent" onclick="setInvoiceStatusFilter('sent')">已寄出</button>
@@ -746,12 +762,14 @@ body{display:flex;flex-direction:column}
 <!-- TAB: CASHFLOW (placeholder) -->
 <div class="tab-panel" id="tab-cashflow">
   <div class="filter-bar">
-    <select class="form-select" id="cash-filter-month" onchange="renderCashflow()" style="width:140px;font-size:.72rem;padding:3px 24px 3px 8px">
-      <option value="all">全部月份</option>
-    </select>
-    <select class="form-select" id="cash-filter-client" onchange="renderCashflow()" style="width:160px;font-size:.72rem;padding:3px 24px 3px 8px">
-      <option value="all">全部客戶</option>
-    </select>
+    <input type="hidden" id="cash-filter-month" value="all">
+    <div class="qi-master-picker" style="width:140px">
+      <button type="button" class="qi-master-trigger" id="cash-filter-month-trigger"><span class="qi-master-trigger-text">全部月份</span><span class="qi-master-trigger-arrow">▼</span></button>
+    </div>
+    <input type="hidden" id="cash-filter-client" value="all">
+    <div class="qi-master-picker" style="width:160px">
+      <button type="button" class="qi-master-trigger" id="cash-filter-client-trigger"><span class="qi-master-trigger-text">全部客戶</span><span class="qi-master-trigger-arrow">▼</span></button>
+    </div>
     <button class="filter-pill active" data-cash-status="all" onclick="setCashStatusFilter('all')">全部</button>
     <button class="filter-pill" data-cash-status="sent" onclick="setCashStatusFilter('sent')">待收</button>
     <button class="filter-pill" data-cash-status="paid" onclick="setCashStatusFilter('paid')">已收</button>
@@ -1140,7 +1158,8 @@ body{display:flex;flex-direction:column}
     <div class="form-row-3">
       <div class="form-group">
         <label class="form-label">服務類別</label>
-        <select class="form-select" id="wim-category-sel" onchange="onWimCategorySelChange()"></select>
+        <input type="hidden" id="wim-category-sel" value="">
+        <div class="qi-master-picker"><button type="button" class="qi-master-trigger" id="wim-category-sel-trigger"><span class="qi-master-trigger-text">— 選擇分類 —</span><span class="qi-master-trigger-arrow">▼</span></button></div>
         <input class="form-input" id="wim-category-custom" placeholder="輸入新類別名稱" style="margin-top:5px;display:none">
       </div>
       <div class="form-group">
@@ -1204,7 +1223,8 @@ body{display:flex;flex-direction:column}
     <div class="modal-title">📋 複製報價單</div>
     <div class="form-group full">
       <label class="form-label">從哪個客戶複製？</label>
-      <select class="form-select" id="copy-quote-src"></select>
+      <input type="hidden" id="copy-quote-src" value="">
+      <div class="qi-master-picker"><button type="button" class="qi-master-trigger" id="copy-quote-src-trigger"><span class="qi-master-trigger-text">— 選擇來源客戶 —</span><span class="qi-master-trigger-arrow">▼</span></button></div>
     </div>
     <div style="font-size:.7rem;color:#888;line-height:1.5">將該客戶的所有報價項目複製到目前選取的客戶。<b style="color:#f39c12">注意：會清空目前報價單。</b></div>
     <div class="modal-btns">
@@ -1307,10 +1327,8 @@ body{display:flex;flex-direction:column}
     </div>
     <div class="form-group full">
       <label class="form-label">AI 模型</label>
-      <select class="form-select" id="set-ai-model">
-        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5（快速便宜，推薦）</option>
-        <option value="claude-sonnet-4-6-20251001">Claude Sonnet 4.6（更聰明）</option>
-      </select>
+      <input type="hidden" id="set-ai-model" value="claude-haiku-4-5-20251001">
+      <div class="qi-master-picker"><button type="button" class="qi-master-trigger" id="set-ai-model-trigger"><span class="qi-master-trigger-text">Claude Haiku 4.5（快速便宜，推薦）</span><span class="qi-master-trigger-arrow">▼</span></button></div>
     </div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeM('settings-modal')">取消</button>
@@ -1326,7 +1344,8 @@ body{display:flex;flex-direction:column}
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">客戶（節目）*</label>
-        <select class="form-select" id="inv-create-client" onchange="onInvoiceCreateClientChange()"></select>
+        <input type="hidden" id="inv-create-client" value="">
+        <div class="qi-master-picker"><button type="button" class="qi-master-trigger" id="inv-create-client-trigger"><span class="qi-master-trigger-text">— 選擇客戶 —</span><span class="qi-master-trigger-arrow">▼</span></button></div>
       </div>
       <div class="form-group">
         <label class="form-label">帳單月份 *</label>
@@ -1705,26 +1724,24 @@ document.querySelectorAll('.filter-pill[data-cf-status]').forEach(p=>p.addEventL
 document.getElementById('cf-search').addEventListener('input',e=>{S.cf.search=e.target.value.toLowerCase();renderCases();});
 
 function refreshClientSelectors(){
-  const cf=document.getElementById('cf-client');
-  const cur=cf.value;
-  cf.innerHTML='<option value="all">全部客戶</option>'+clientList().map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
-  if(cur)cf.value=cur;
-  // case modal client select
-  const fc=document.getElementById('f-client');
-  if(fc){
-    const curC=fc.value;
-    fc.innerHTML='<option value="">— 請選擇 —</option>'+clientList().map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
-    if(curC)fc.value=curC;
+  // cf-client filter is now a custom flat picker — wire it up
+  const trig=document.getElementById('cf-client-trigger');
+  if(trig){
+    buildFlatPicker('cf-client','cf-client-trigger',
+      ()=>[{v:'all',label:'全部客戶'},...clientList().map(c=>({v:c.id,label:c.name}))],
+      ()=>renderCases(),'全部客戶');
   }
 }
 function refreshMonthFilter(){
-  const mf=document.getElementById('cf-month');
-  const cur=mf.value;
-  const months=new Set();
-  caseList().forEach(c=>{if(c.dueDate)months.add(c.dueDate.slice(0,7));});
-  const sorted=[...months].sort().reverse();
-  mf.innerHTML='<option value="all">全部月份</option>'+sorted.map(m=>`<option value="${m}">${m.replace('-','/')}</option>`).join('');
-  if(cur)mf.value=cur;
+  const trig=document.getElementById('cf-month-trigger');
+  if(trig){
+    buildFlatPicker('cf-month','cf-month-trigger',()=>{
+      const months=new Set();
+      caseList().forEach(c=>{if(c.dueDate)months.add(c.dueDate.slice(0,7));});
+      const sorted=[...months].sort().reverse();
+      return [{v:'all',label:'全部月份'},...sorted.map(m=>({v:m,label:m.replace('-','/')}))];
+    },()=>renderCases(),'全部月份');
+  }
 }
 
 // ── RENDER: CASES ──────────────────────────────────
@@ -1780,12 +1797,13 @@ function renderCases(){
         <input type="checkbox" class="check-toggle" ${c.isOutsourced?'checked':''}>
       </td>
       <td onclick="event.stopPropagation()">
-        <select class="status-select" data-status="${status}" onchange="setCaseStatus('${c.id}',this.value)" onclick="event.stopPropagation()">
-          <option value="todo" ${status==='todo'?'selected':''}>待開始</option>
-          <option value="doing" ${status==='doing'?'selected':''}>執行中</option>
-          <option value="editing" ${status==='editing'?'selected':''}>修改中</option>
-          <option value="done" ${status==='done'?'selected':''}>已完成</option>
-        </select>
+        <input type="hidden" id="case-status-input-${c.id}" value="${status}">
+        <div class="qi-master-picker">
+          <button type="button" class="qi-master-trigger case-status-pill" data-status="${status}" id="case-status-${c.id}">
+            <span class="qi-master-trigger-text">${STATUS_LABEL[status]||status}</span>
+            <span class="qi-master-trigger-arrow">▼</span>
+          </button>
+        </div>
       </td>
       <td style="text-align:center" onclick="event.stopPropagation()">
         ${(()=>{
@@ -1804,6 +1822,20 @@ function renderCases(){
       </td>
     </tr>`;
   }).join('');
+  // Wire up the per-row status pickers (one custom picker per row)
+  arr.forEach(c=>{
+    const triggerId='case-status-'+c.id;
+    if(!document.getElementById(triggerId))return;
+    buildFlatPicker('case-status-input-'+c.id, triggerId,
+      ()=>STATUS_OPTIONS.map(o=>({v:o.v,label:o.label})),
+      (v)=>{
+        setCaseStatus(c.id,v);
+        const btn=document.getElementById(triggerId);
+        if(btn)btn.dataset.status=v;
+      },
+      STATUS_LABEL[c.status||'todo']
+    );
+  });
 }
 function toggleOutsource(id){
   const c=S.cases[id];if(!c)return;
@@ -1973,6 +2005,75 @@ function closePicker(prefix){
   const trig=document.getElementById(prefix+'-trigger');
   if(panel)panel.style.display='none';
   if(trig)trig.classList.remove('open');
+}
+
+// ── Generic flat picker (replaces a native <select>) ─────────
+// Builds the picker HTML and wires open/close + selection
+// inputId: hidden <input> that holds the value
+// triggerId: <button> with the label text
+// optionsFn: () => [{v, label}]   list of options (re-evaluated on each open)
+// onChange: (value) => void   called after selection (after value already set + label updated)
+// initialLabel: shown when value is empty
+function buildFlatPicker(inputId,triggerId,optionsFn,onChange,initialLabel){
+  const trig=document.getElementById(triggerId);
+  const panelId=triggerId.replace(/-trigger$/,'')+'-panel';
+  // Create the panel beside the trigger
+  let panel=document.getElementById(panelId);
+  if(!panel){
+    panel=document.createElement('div');
+    panel.className='qi-master-panel';
+    panel.id=panelId;
+    panel.style.display='none';
+    trig.parentNode.appendChild(panel);
+  }
+  // Refresh function rebuilds the panel options HTML
+  const refresh=()=>{
+    const cur=document.getElementById(inputId).value;
+    const opts=optionsFn();
+    panel.innerHTML=opts.map(o=>{
+      const escVal=String(o.v).replace(/'/g,"\\'");
+      return `<div class="qi-master-opt${o.v===cur?' selected':''}" onclick="window._flatPickerPick('${inputId}','${triggerId}','${panelId}','${escVal}',this.textContent)">${escHtml(o.label)}</div>`;
+    }).join('');
+  };
+  // Toggle handler (assigned via onclick attribute on the trigger)
+  trig.onclick=()=>{
+    const isOpen=panel.style.display==='block';
+    if(isOpen){panel.style.display='none';trig.classList.remove('open');}
+    else{
+      refresh();panel.style.display='block';trig.classList.add('open');
+      setTimeout(()=>{
+        const handler=(e)=>{
+          if(!panel.contains(e.target)&&e.target!==trig&&!trig.contains(e.target)){
+            panel.style.display='none';trig.classList.remove('open');
+            document.removeEventListener('click',handler);
+          }
+        };
+        document.addEventListener('click',handler);
+      },10);
+    }
+  };
+  // Stash callback so the global pick handler can invoke it
+  trig._flatPickerOnChange=onChange;
+  // Set initial trigger label
+  const cur=document.getElementById(inputId).value;
+  const opts=optionsFn();
+  const sel=opts.find(o=>String(o.v)===String(cur));
+  trig.querySelector('.qi-master-trigger-text').textContent=sel?sel.label:(initialLabel||'— 請選擇 —');
+}
+window._flatPickerPick=function(inputId,triggerId,panelId,value,label){
+  document.getElementById(inputId).value=value;
+  const trig=document.getElementById(triggerId);
+  trig.querySelector('.qi-master-trigger-text').textContent=label;
+  document.getElementById(panelId).style.display='none';
+  trig.classList.remove('open');
+  if(trig._flatPickerOnChange)trig._flatPickerOnChange(value);
+};
+// Helper to refresh just the trigger label (called when external state updates the hidden input)
+function refreshFlatPickerLabel(inputId,triggerId,optionsFn,initialLabel){
+  const cur=document.getElementById(inputId).value;
+  const opts=optionsFn();
+  const sel=opts.find(o=>String(o.v)===String(cur));
+  document.getElementById(triggerId).querySelector('.qi-master-trigger-text').textContent=sel?sel.label:(initialLabel||'— 請選擇 —');
 }
 
 // ── 服務項目 (work items library) picker — Bundles + categorized regular items ──
@@ -2539,30 +2640,27 @@ function renderWorkItems(){
   tb.innerHTML=rowsHtml.join('');
 }
 function refreshWimCategorySelect(currentCat){
-  const sel=document.getElementById('wim-category-sel');
+  const inp=document.getElementById('wim-category-sel');
   const custom=document.getElementById('wim-category-custom');
-  if(!sel)return;
+  if(!inp)return;
+  // Build category options
+  const optsFn=()=>{
+    const cats=new Set();
+    workItemList().forEach(w=>{if(w.category&&w.category.trim())cats.add(w.category.trim());});
+    const sorted=[...cats].sort((a,b)=>a.localeCompare(b,'zh-TW'));
+    return [{v:'',label:'— 未分類 —'},...sorted.map(c=>({v:c,label:c})),{v:'__new__',label:'＋ 新增類別…'}];
+  };
+  // Decide initial value
   const cats=new Set();
   workItemList().forEach(w=>{if(w.category&&w.category.trim())cats.add(w.category.trim());});
-  const sorted=[...cats].sort((a,b)=>a.localeCompare(b,'zh-TW'));
-  sel.innerHTML=
-    '<option value="">— 未分類 —</option>'+
-    sorted.map(c=>`<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('')+
-    '<option value="__new__">＋ 新增類別…</option>';
-  if(currentCat&&sorted.includes(currentCat)){
-    sel.value=currentCat;
-    custom.style.display='none';
-    custom.value='';
+  if(currentCat&&cats.has(currentCat)){
+    inp.value=currentCat;custom.style.display='none';custom.value='';
   }else if(currentCat){
-    // existing category was renamed/deleted; treat as new custom
-    sel.value='__new__';
-    custom.style.display='block';
-    custom.value=currentCat;
+    inp.value='__new__';custom.style.display='block';custom.value=currentCat;
   }else{
-    sel.value='';
-    custom.style.display='none';
-    custom.value='';
+    inp.value='';custom.style.display='none';custom.value='';
   }
+  buildFlatPicker('wim-category-sel','wim-category-sel-trigger',optsFn,()=>onWimCategorySelChange(),'— 未分類 —');
 }
 function onWimCategorySelChange(){
   const sel=document.getElementById('wim-category-sel');
@@ -3466,8 +3564,11 @@ function openEditQuoteItem(iid){
   S.editQuoteItemId=iid;
   document.getElementById('qi-modal-title').textContent='編輯報價項目';
   document.getElementById('qi-del-btn').style.display='block';
-  document.getElementById('qi-from-master').value='';
-  document.getElementById('qi-master-trigger-text').textContent='— 自訂輸入 —';
+  // Restore link to master work item (so addons section can re-render with checked state)
+  const wid=it.workItemId||'';
+  document.getElementById('qi-from-master').value=wid;
+  const w=wid?S.workItems[wid]:null;
+  document.getElementById('qi-master-trigger-text').textContent=w?w.label:'— 自訂輸入 —';
   refreshQiMasterDropdown();
   document.getElementById('qi-label').value=it.label||'';
   document.getElementById('qi-category').value=it.category||'';
@@ -3477,7 +3578,26 @@ function openEditQuoteItem(iid){
   document.getElementById('qi-sync-row').style.display='none';
   document.getElementById('qi-sub-section').style.display='none';
   document.getElementById('qi-addon-section').style.display='none';
-  _qiSelectedSubId=null;_qiSelectedAddonIds=new Set();
+  _qiSelectedSubId=it.subItemId||null;
+  // Pre-check addons that already exist in the quote (rows linked to this same workItemId)
+  _qiSelectedAddonIds=new Set();
+  if(wid){
+    items.filter(x=>x.isAddon&&x.workItemId===wid).forEach(x=>{
+      if(x.addonId)_qiSelectedAddonIds.add(x.addonId);
+    });
+    // Render the addon/sub sections based on the master
+    if(w){
+      ensureWorkItemDefaults(w);
+      if(w.subItems?.length){
+        document.getElementById('qi-sub-section').style.display='flex';
+        renderQiSubOptions(w);
+      }
+      if(w.addons?.length){
+        document.getElementById('qi-addon-section').style.display='flex';
+        renderQiAddons(w);
+      }
+    }
+  }
   openM('quote-item-modal');
 }
 function saveQuoteItem(){
@@ -3510,6 +3630,26 @@ function saveQuoteItem(){
   if(S.editQuoteItemId){
     const idx=c.quotation.items.findIndex(x=>x.itemId===S.editQuoteItemId);
     if(idx>=0)c.quotation.items[idx]=item;
+    // Add newly-checked addons as separate quotation rows (skip ones already present)
+    if(wid&&_qiSelectedAddonIds.size>0){
+      const wm=S.workItems[wid];
+      if(wm?.addons){
+        const existingAddonIds=new Set(c.quotation.items.filter(x=>x.isAddon&&x.workItemId===wid).map(x=>x.addonId));
+        wm.addons.filter(a=>_qiSelectedAddonIds.has(a.id)&&!existingAddonIds.has(a.id)).forEach(a=>{
+          c.quotation.items.push({
+            itemId:uid(),
+            label:a.label,
+            category:item.category,
+            defaultPrice:a.amount||0,
+            qty:1,
+            unit:'',
+            isAddon:true,
+            workItemId:wid,
+            addonId:a.id,
+          });
+        });
+      }
+    }
   }else{
     c.quotation.items=c.quotation.items||[];
     // BUNDLE: save as a single quotation row (one line, unit='Bundle', price=bundle's defaultPrice)
@@ -3526,7 +3666,25 @@ function saveQuoteItem(){
         workItemId:wid,
         bundleSourceId:wid,
       });
-      toast(`已新增 Bundle：「${w.label}」`);
+      // Also push selected addons for the Bundle (same as regular items)
+      let addonAdded=0;
+      if(w.addons&&_qiSelectedAddonIds.size>0){
+        w.addons.filter(a=>_qiSelectedAddonIds.has(a.id)).forEach(a=>{
+          c.quotation.items.push({
+            itemId:uid(),
+            label:a.label,
+            category:(w.category||'').trim()||category||'未分類',
+            defaultPrice:a.amount||0,
+            qty:1,
+            unit:'',
+            isAddon:true,
+            workItemId:wid,
+            addonId:a.id,
+          });
+          addonAdded++;
+        });
+      }
+      toast(`已新增 Bundle：「${w.label}」${addonAdded?` · ${addonAdded} 個加減項`:''}`);
       c.quotation.updatedAt=Date.now();
       saveClientObj(c);
       closeM('quote-item-modal');
@@ -3586,10 +3744,12 @@ function confirmDelQuoteItem(){
 }
 function openCopyQuote(){
   const cid=S.selectedClientForQuote;if(!cid){toast('請先選擇客戶',true);return;}
-  const sel=document.getElementById('copy-quote-src');
-  sel.innerHTML='<option value="">— 請選擇來源客戶 —</option>'+
-    clientList().filter(c=>c.id!==cid&&(c.quotation?.items?.length||0)>0)
-      .map(c=>`<option value="${c.id}">${escHtml(c.name)}（${c.quotation.items.length} 項）</option>`).join('');
+  document.getElementById('copy-quote-src').value='';
+  buildFlatPicker('copy-quote-src','copy-quote-src-trigger',
+    ()=>[{v:'',label:'— 請選擇來源客戶 —'},
+      ...clientList().filter(c=>c.id!==cid&&(c.quotation?.items?.length||0)>0)
+        .map(c=>({v:c.id,label:`${c.name}（${c.quotation.items.length} 項）`}))],
+    null,'— 請選擇來源客戶 —');
   openM('copy-quote-modal');
 }
 function doCopyQuote(){
@@ -3617,6 +3777,12 @@ function loadSettings(){
 function openSettings(){
   document.getElementById('set-api-key').value=S.settings.apiKey||'';
   document.getElementById('set-ai-model').value=S.settings.aiModel||'claude-haiku-4-5-20251001';
+  buildFlatPicker('set-ai-model','set-ai-model-trigger',
+    ()=>[
+      {v:'claude-haiku-4-5-20251001',label:'Claude Haiku 4.5（快速便宜，推薦）'},
+      {v:'claude-sonnet-4-6-20251001',label:'Claude Sonnet 4.6（更聰明）'},
+    ],
+    null,'Claude Haiku 4.5（快速便宜，推薦）');
   // Pre-fill company info from globalSettings (with sensible defaults if empty)
   const co=S.globalSettings?.company||{};
   document.getElementById('set-co-name').value=co.name??'WalkIn Studio';
@@ -4171,21 +4337,18 @@ function setInvoiceStatusFilter(status){
   renderInvoices();
 }
 function refreshInvoiceFilters(){
-  // populate month + client dropdowns
-  const monthsSel=document.getElementById('inv-filter-month');
-  const clientsSel=document.getElementById('inv-filter-client');
-  if(monthsSel){
-    const months=new Set();
-    invoiceList().forEach(inv=>{if(inv.billingMonth)months.add(inv.billingMonth);});
-    const sorted=[...months].sort().reverse();
-    const cur=monthsSel.value;
-    monthsSel.innerHTML='<option value="all">全部月份</option>'+sorted.map(m=>`<option value="${m}">${m.replace('-','/')}</option>`).join('');
-    if(cur)monthsSel.value=cur;
+  if(document.getElementById('inv-filter-month-trigger')){
+    buildFlatPicker('inv-filter-month','inv-filter-month-trigger',()=>{
+      const months=new Set();
+      invoiceList().forEach(inv=>{if(inv.billingMonth)months.add(inv.billingMonth);});
+      const sorted=[...months].sort().reverse();
+      return [{v:'all',label:'全部月份'},...sorted.map(m=>({v:m,label:m.replace('-','/')}))];
+    },()=>renderInvoices(),'全部月份');
   }
-  if(clientsSel){
-    const cur=clientsSel.value;
-    clientsSel.innerHTML='<option value="all">全部客戶</option>'+clientList().map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
-    if(cur)clientsSel.value=cur;
+  if(document.getElementById('inv-filter-client-trigger')){
+    buildFlatPicker('inv-filter-client','inv-filter-client-trigger',
+      ()=>[{v:'all',label:'全部客戶'},...clientList().map(c=>({v:c.id,label:c.name}))],
+      ()=>renderInvoices(),'全部客戶');
   }
 }
 function renderInvoices(){
@@ -4238,8 +4401,11 @@ function renderInvoices(){
 function openCreateInvoice(){
   const clients=clientList();
   if(!clients.length){toast('請先建立客戶',true);return;}
-  const sel=document.getElementById('inv-create-client');
-  sel.innerHTML=clients.map(c=>`<option value="${c.id}">${escHtml(c.name)}${c.invoicePrefix?` · ${escHtml(c.invoicePrefix)}`:' · ⚠️ 未設定前綴'}</option>`).join('');
+  // Default to first client
+  if(!document.getElementById('inv-create-client').value)document.getElementById('inv-create-client').value=clients[0].id;
+  buildFlatPicker('inv-create-client','inv-create-client-trigger',
+    ()=>clients.map(c=>({v:c.id,label:`${c.name}${c.invoicePrefix?` · ${c.invoicePrefix}`:' · ⚠️ 未設定前綴'}`})),
+    ()=>onInvoiceCreateClientChange(),'— 選擇客戶 —');
   const today=new Date();
   document.getElementById('inv-create-month').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
   updateInvoicePreview();
@@ -4294,7 +4460,15 @@ function refreshInvoiceCasePicker(){
       autoMatch=wis.find(w=>(w.category||'').trim()===cs.type)||wis.find(w=>(w.label||'').includes(cs.type));
     }
     const matchedId=autoMatch?.id||'';
-    const initialPrice=autoMatch?autoMatch.defaultPrice:(cs.pricing?.amount||0);
+    // Always use case.pricing.amount as the source of truth for invoice line price.
+    // The 服務 dropdown is only for the displayed service label; it doesn't override the case's amount.
+    const addonSum=(cs.pricing?.addons||[]).reduce((s,a)=>s+((a.amount||0)*(a.qty||0)),0);
+    const casePrice=cs.pricing?.amount||0;
+    // Base = case price minus addon sum (the "service-only" portion); addons get listed separately on invoice
+    const basePrice=Math.max(0,casePrice-addonSum);
+    const initialPrice=casePrice;
+    // If has addons, show them as a sub-line under the case
+    const addonNote=addonSum?`<div style="margin-left:32px;margin-top:3px;font-size:.62rem;color:#a86a00;font-style:italic">➕ 含加減項：${(cs.pricing.addons||[]).filter(a=>a.qty>0).map(a=>`${escHtml(a.label)}×${a.qty}`).join('、')} = ${addonSum>=0?'+':''}$${fmtMoney(addonSum)}</div>`:'';
     // Find attached child cases (will get auto-marked when this parent gets invoiced)
     const children=Object.values(S.cases).filter(x=>x.linkedToCaseId===cs.id);
     const childrenHtml=children.length?`<div style="margin-left:32px;margin-top:4px;font-size:.62rem;color:#5a7a8a;font-style:italic">↳ 含 ${children.length} 個附屬：${children.map(ch=>escHtml(ch.title||'')+' ('+escHtml(ch.type||'')+')').join('、')}</div>`:'';
@@ -4307,10 +4481,11 @@ function refreshInvoiceCasePicker(){
       </div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:32px;margin-top:5px">
         <span style="font-size:.62rem;color:#888;flex-shrink:0">服務 →</span>
-        <select class="inv-create-case-wi" data-case-id="${cs.id}" data-orig-amt="${cs.pricing?.amount||0}" onchange="onCaseWorkItemChange('${cs.id}',this.value)" style="flex:1;background:#f5f5f5;border:1px solid #d8d8d8;border-radius:4px;padding:3px 6px;color:#444444;font-size:.66rem;font-family:inherit;outline:none">
+        <select class="inv-create-case-wi" data-case-id="${cs.id}" data-base-price="${basePrice}" data-addon-sum="${addonSum}" onchange="onCaseWorkItemChange('${cs.id}',this.value)" style="flex:1;background:#f5f5f5;border:1px solid #d8d8d8;border-radius:4px;padding:3px 6px;color:#444444;font-size:.66rem;font-family:inherit;outline:none">
           ${wiOptionsHtml(matchedId)}
         </select>
       </div>
+      ${addonNote}
       ${childrenHtml}
     </div>`;
   }).join('');
@@ -4318,12 +4493,16 @@ function refreshInvoiceCasePicker(){
   countEl.textContent=`${cases.length} 個`;
 }
 function onCaseWorkItemChange(caseId,wid){
+  // The dropdown is just a service-label picker — the case's pricing.amount stays as the invoice price.
+  // Re-render the price cell to confirm (no actual change in value).
   const cs=S.cases[caseId];
   const priceCell=document.querySelector(`.inv-case-price[data-case-id="${caseId}"]`);
   if(!priceCell)return;
-  if(wid){
+  priceCell.textContent='$'+fmtMoney(cs?.pricing?.amount||0);
+  // Defensive: keep block bypass below for backwards compatibility
+  if(false&&wid){
     const w=S.workItems[wid];
-    if(w){priceCell.textContent='$'+fmtMoney(w.defaultPrice);return;}
+    if(w){priceCell.textContent='$'+fmtMoney(w.defaultPrice||0);return;}
   }
   // fallback to case original amount
   priceCell.textContent='$'+fmtMoney(cs?.pricing?.amount||0);
@@ -4396,6 +4575,11 @@ function createBlankInvoice(clientId,billingMonth,prefixOverride,seedCases){
     const cs=S.cases[csid];
     if(!cs)return;
     const w=wid?S.workItems[wid]:null;
+    // Source of truth = case.pricing.amount. Subtract addon-sum to get the "service-only" base.
+    const caseAddons=(cs.pricing?.addons||[]).filter(a=>a.qty&&a.qty>0);
+    const addonSum=caseAddons.reduce((s,a)=>s+(a.amount||0)*a.qty,0);
+    const casePrice=cs.pricing?.amount||0;
+    const baseLinePrice=Math.max(0,casePrice-addonSum);
     items.push({
       itemId:uid(),
       sourceCaseId:cs.id,
@@ -4403,9 +4587,25 @@ function createBlankInvoice(clientId,billingMonth,prefixOverride,seedCases){
       label:cs.title||'',
       serviceLabel:w?w.label:'',  // service type sub-label
       category:w?(w.category||cs.type||''):(cs.type||''),
-      defaultPrice:w?(w.defaultPrice||0):(cs.pricing?.amount||0),
+      defaultPrice:baseLinePrice,
       qty:1,
       unit:w?(w.unit||'集'):'集',
+    });
+    // Bring in any addons saved on the case (qty>0) as separate Invoice line items
+    caseAddons.forEach(a=>{
+      items.push({
+        itemId:uid(),
+        sourceCaseId:cs.id,
+        sourceWorkItemId:w?w.id:null,
+        sourceAddonId:a.addonId,
+        label:a.label||'',
+        serviceLabel:w?(w.label||''):'',
+        category:w?(w.category||cs.type||''):(cs.type||''),
+        defaultPrice:a.amount||0,
+        qty:a.qty,
+        unit:'',
+        isAddon:true,
+      });
     });
     sourceCaseIds.push(cs.id);
   });
@@ -4607,7 +4807,7 @@ function renderInvoiceEditor(){
       </div>
       <div class="form-group">
         <label class="form-label">狀態</label>
-        <select class="form-select" onchange="updateInvoiceField('status',this.value)">
+        <select class="status-select" data-status="${inv.status==='draft'?'todo':(inv.status==='sent'?'editing':'done')}" style="font-size:.78rem;padding:5px 22px 5px 9px;width:auto" onchange="updateInvoiceField('status',this.value);this.dataset.status=(this.value==='draft'?'todo':(this.value==='sent'?'editing':'done'))">
           <option value="draft" ${inv.status==='draft'?'selected':''}>草稿</option>
           <option value="sent" ${inv.status==='sent'?'selected':''}>已寄出</option>
           <option value="paid" ${inv.status==='paid'?'selected':''}>已收款</option>
@@ -5039,20 +5239,18 @@ function setCashStatusFilter(s){
   renderCashflow();
 }
 function refreshCashFilters(){
-  const months=document.getElementById('cash-filter-month');
-  const clients=document.getElementById('cash-filter-client');
-  if(months){
-    const set=new Set();
-    invoiceList().forEach(inv=>{if(inv.billingMonth)set.add(inv.billingMonth);});
-    const sorted=[...set].sort().reverse();
-    const cur=months.value;
-    months.innerHTML='<option value="all">全部月份</option>'+sorted.map(m=>`<option value="${m}">${m.replace('-','/')}</option>`).join('');
-    if(cur)months.value=cur;
+  if(document.getElementById('cash-filter-month-trigger')){
+    buildFlatPicker('cash-filter-month','cash-filter-month-trigger',()=>{
+      const set=new Set();
+      invoiceList().forEach(inv=>{if(inv.billingMonth)set.add(inv.billingMonth);});
+      const sorted=[...set].sort().reverse();
+      return [{v:'all',label:'全部月份'},...sorted.map(m=>({v:m,label:m.replace('-','/')}))];
+    },()=>renderCashflow(),'全部月份');
   }
-  if(clients){
-    const cur=clients.value;
-    clients.innerHTML='<option value="all">全部客戶</option>'+clientList().map(c=>`<option value="${c.id}">${escHtml(c.name)}</option>`).join('');
-    if(cur)clients.value=cur;
+  if(document.getElementById('cash-filter-client-trigger')){
+    buildFlatPicker('cash-filter-client','cash-filter-client-trigger',
+      ()=>[{v:'all',label:'全部客戶'},...clientList().map(c=>({v:c.id,label:c.name}))],
+      ()=>renderCashflow(),'全部客戶');
   }
 }
 
