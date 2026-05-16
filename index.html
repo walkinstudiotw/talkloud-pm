@@ -808,11 +808,11 @@ function initFirebase(){
     migrateSplitReels(); // 一次性遷移：V2+reel 分拆為 V2 / Reels
     // 即時監聽
     _db.ref('eps').on('value',snap=>{
-      S.eps=snap.val()?Object.values(snap.val()):[];
+      S.eps=snap.val()?Object.values(snap.val()).filter(Boolean):[];
       renderCurrentTab();
     });
     _db.ref('pp').on('value',snap=>{
-      S.pp=snap.val()?Object.values(snap.val()):[];
+      S.pp=snap.val()?Object.values(snap.val()).filter(Boolean):[];
     });
   });
 }
@@ -982,7 +982,7 @@ function renderSched(){
   tbody.innerHTML=eps.map(ep=>{
     const vt=ep.venueStartTime&&ep.venueEndTime?`${ep.venueStartTime}-${ep.venueEndTime}`:'';
     const gt=ep.guestNotifyStart&&ep.guestNotifyEnd?`${ep.guestNotifyStart}-${ep.guestNotifyEnd}`:'';
-    const olPP=S.pp.find(p=>p.eid===ep.id&&p.stage===0);
+    const olPP=S.pp.find(p=>p&&p.eid===ep.id&&p.stage===0);
     const olDone=!!olPP?.done;
     const olLink=ep.outlineUrl?`<a href="${ep.outlineUrl}" target="_blank" class="link-icon" title="開啟訪綱" onclick="event.stopPropagation()">🔗</a>`:'';
     const olCheck=READONLY
