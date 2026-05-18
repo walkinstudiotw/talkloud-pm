@@ -731,7 +731,7 @@ const S={
   amap:{},  // assignee -> color index
 };
 let gStart=monOf(new Date());
-let editId=null, popPpId=null;
+let editId=null, popPpId=null, undoneTargetId=null;
 
 // ── FIREBASE ───────────────────────────────────────
 const _fbConfig={
@@ -1471,13 +1471,35 @@ function openPop(e,ppId,epNum){
   document.getElementById('pop-title').textContent=`${epNum} — ${st?.label||''}`;
   document.getElementById('pop-due').value=p?.due||'';
   document.getElementById('pop-assignee').value=p?.assignee||'';
-  // 已完成的工作顯示「設為未完成」按鈕
+  // 計算「設為未完成」的目標：若目前 stage 已完成則退回它，否則退回最近一個已完成的 stage
+  const allForEp=p?S.pp.filter(x=>x.eid===p.eid):[];
+  let undoneTarget=null;
+  if(p?.done){
+    undoneTarget=p; // 已完成欄點入（如 Flightcast done）
+  }else{
+    // 找最後完成的 stage（stage 數字最大的 done）
+    const donePPs=allForEp.filter(x=>!!x.done).sort((a,b)=>b.stage-a.stage);
+    undoneTarget=donePPs[0]||null;
+  }
+  undoneTargetId=undoneTarget?.id||null;
   const undoneBtn=document.getElementById('pop-undone-btn');
-  if(undoneBtn)undoneBtn.style.display=p?.done?'':'none';
+  if(undoneBtn){
+    if(undoneTarget){
+      undoneBtn.style.display='';
+      undoneBtn.textContent=`↩ 設為未完成：${STAGES[undoneTarget.stage]?.label||''}`;
+    }else{
+      undoneBtn.style.display='none';
+    }
+  }
+  // 定位 popup，靠近底部時往上翻轉
   const pop=document.getElementById('pop');
   const r=e.currentTarget.getBoundingClientRect();
-  pop.style.left=Math.min(r.left,window.innerWidth-250)+'px';
-  pop.style.top=(r.top+20)+'px';pop.classList.add('open');
+  const POP_H=210;
+  let top=r.bottom+8;
+  if(top+POP_H>window.innerHeight-10)top=r.top-POP_H-8;
+  pop.style.left=Math.min(r.left,window.innerWidth-260)+'px';
+  pop.style.top=Math.max(8,top)+'px';
+  pop.classList.add('open');
 }
 function closePop(){document.getElementById('pop').classList.remove('open');}
 function savePop(){
@@ -1490,7 +1512,7 @@ function savePop(){
   toast('已儲存');
 }
 function undonePop(){
-  const p=S.pp.find(x=>x.id===popPpId);if(!p)return;
+  const p=S.pp.find(x=>x.id===undoneTargetId);if(!p)return;
   pushHistory();p.done=null;save();closePop();renderKanban();renderSched();
   if(document.getElementById('tab-calendar').classList.contains('active'))renderCal();
   toast(`已取消完成：${STAGES[p.stage]?.label||''}`);
