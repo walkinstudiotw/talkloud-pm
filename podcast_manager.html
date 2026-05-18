@@ -287,6 +287,8 @@ body{display:flex;flex-direction:column}
 .pop-lbl{font-size:.63rem;color:#666666;text-transform:uppercase;letter-spacing:.3px}
 .pop-input{background:#222222;border:1px solid #2a2a2a;border-radius:5px;padding:5px 8px;color:#f0ece8;font-size:.75rem;font-family:inherit;outline:none;width:100%}
 .pop-input:focus{border-color:#aaaaaa}
+.pop-select{-webkit-appearance:none;appearance:none;background:#222222 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center;background-size:9px 5px;border:1px solid #2a2a2a;border-radius:5px;padding:5px 26px 5px 8px;color:#f0ece8;font-size:.75rem;font-family:inherit;outline:none;width:100%;cursor:pointer}
+.pop-select:focus{border-color:#aaaaaa}
 .pop-btns{display:flex;gap:6px;justify-content:flex-end;margin-top:4px}
 .pop-btn{padding:4px 11px;border-radius:5px;border:1px solid #2a2a2a;background:transparent;color:#888888;font-size:.7rem;font-family:inherit;cursor:pointer;transition:all .15s}
 .pop-btn.save{border-color:#aaaaaa;color:#aaaaaa;background:#181818}
@@ -682,7 +684,7 @@ body{display:flex;flex-direction:column}
 <div class="pop" id="pop">
   <div class="pop-title" id="pop-title"></div>
   <div class="pop-row"><div class="pop-lbl">截止日</div><input class="pop-input" id="pop-due" type="date"></div>
-  <div class="pop-row"><div class="pop-lbl">負責人</div><input class="pop-input" id="pop-assignee" placeholder="輸入姓名"></div>
+  <div class="pop-row"><div class="pop-lbl">負責人</div><select class="pop-select" id="pop-assignee"></select></div>
   <div class="pop-btns">
     <button class="pop-btn undone" id="pop-undone-btn" onclick="undonePop()" style="display:none">↩ 設為未完成</button>
     <button class="pop-btn" onclick="closePop()">關閉</button>
@@ -718,6 +720,7 @@ const STAGES=[
 ];
 // 慕蓉(PM)全覽；其他人只看自己的
 const CREW_PM='慕蓉';
+const CREW_LIST=['資源','亞庭','琤琤']; // 團隊成員（下拉選單用）
 const ACOLORS=['#444444','#e67e22','#8b7cf8','#3498db','#e74c3c','#f1c40f','#1abc9c','#e91e63'];
 
 // ── STATE ──────────────────────────────────────────
@@ -1264,7 +1267,6 @@ function renderCal(){
 
   // collect assignees — 固定顯示所有成員 + 動態 assignee
   S.amap={};
-  const CREW_LIST=['資源','亞庭','琤琤'];
   CREW_LIST.forEach(n=>aColor(n)); // 預先分配顏色
   S.pp.forEach(p=>{if(p.assignee)aColor(p.assignee);});
 
@@ -1470,7 +1472,12 @@ function openPop(e,ppId,epNum){
   const st=p?STAGES[p.stage]:null;
   document.getElementById('pop-title').textContent=`${epNum} — ${st?.label||''}`;
   document.getElementById('pop-due').value=p?.due||'';
-  document.getElementById('pop-assignee').value=p?.assignee||'';
+  // 負責人下拉：固定成員 + 目前已指定但不在名單的人（保留相容性）
+  const selA=document.getElementById('pop-assignee');
+  const cur=p?.assignee||'';
+  const opts=['',...CREW_LIST,...(cur&&!CREW_LIST.includes(cur)?[cur]:[])];
+  selA.innerHTML=opts.map(n=>`<option value="${n}" ${n===cur?'selected':''}>${n||'── 未指定 ──'}</option>`).join('');
+
   // 計算「設為未完成」的目標：若目前 stage 已完成則退回它，否則退回最近一個已完成的 stage
   const allForEp=p?S.pp.filter(x=>x.eid===p.eid):[];
   let undoneTarget=null;
