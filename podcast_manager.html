@@ -1395,8 +1395,11 @@ function renderKanban(){
     let cards=S.eps.filter(ep=>{
       const all=S.pp.filter(p=>p.eid===ep.id);
       if(!all.length)return false;
-      // Reels（stage 5）完成 → 整集進「已完成」，不再出現在任何工作欄
-      if(all.find(p=>p.stage===5)?.done)return false;
+      // V2(4) + Reels(5) + Flightcast(6) 全完成 → 整集進「已完成」，不再出現在任何工作欄
+      const fullyDone=!!all.find(p=>p.stage===4)?.done&&
+                      !!all.find(p=>p.stage===5)?.done&&
+                      !!all.find(p=>p.stage===6)?.done;
+      if(fullyDone)return false;
       const cur=all.find(p=>p.stage===si);
       return stageUnlocked(all,si)&&cur&&!cur.done;
     });
@@ -1428,18 +1431,27 @@ function renderKanban(){
     </div>`;
   });
 
-  // Done col — Reels（stage 5）完成即視為整集完成
-  const donePairs=S.pp.filter(p=>p.stage===5&&!!p.done).map(p=>({rlPP:p,ep:S.eps.find(e=>e.id===p.eid)})).filter(x=>x.ep);
+  // Done col — V2(4) + Reels(5) + Flightcast上架(6) 全完成才算已完成
+  const doneEps=S.eps.filter(ep=>{
+    const all=S.pp.filter(p=>p.eid===ep.id);
+    return !!all.find(p=>p.stage===4)?.done&&
+           !!all.find(p=>p.stage===5)?.done&&
+           !!all.find(p=>p.stage===6)?.done;
+  });
   h+=`<div class="k-col">
     <div class="k-col-accent" style="background:#444444"></div>
-    <div class="k-col-hdr"><span class="k-col-title" style="color:#aaaaaa">✅ 已完成</span><span class="k-count">${donePairs.length}</span></div>
+    <div class="k-col-hdr"><span class="k-col-title" style="color:#aaaaaa">✅ 已完成</span><span class="k-count">${doneEps.length}</span></div>
     <div class="k-cards">
-      ${donePairs.map(({rlPP,ep})=>`<div class="k-card" style="opacity:.6;cursor:pointer" onclick="openPop(event,'${rlPP.id}','${ep.epNumber}')" title="點擊可設為未完成">
-        <div class="k-ep">${ep.epNumber}</div>
-        <div class="k-topic">${ep.topic||''}</div>
-        <div class="k-guest">${ep.guest||''}</div>
-        <div class="k-meta"><span style="font-size:.63rem;color:#aaaaaa;font-weight:700">✅ Reels 完成</span></div>
-      </div>`).join('')||'<div style="font-size:.7rem;color:#555555;text-align:center;padding:14px">無</div>'}
+      ${doneEps.map(ep=>{
+        // 點擊後開 Flightcast(6) popup，方便「設為未完成」
+        const ytPP=S.pp.find(p=>p.eid===ep.id&&p.stage===6);
+        return`<div class="k-card" style="opacity:.6;cursor:pointer" onclick="openPop(event,'${ytPP?.id}','${ep.epNumber}')" title="點擊可設為未完成">
+          <div class="k-ep">${ep.epNumber}</div>
+          <div class="k-topic">${ep.topic||''}</div>
+          <div class="k-guest">${ep.guest||''}</div>
+          <div class="k-meta"><span style="font-size:.63rem;color:#aaaaaa;font-weight:700">✅ V2 · Reels · 上架</span></div>
+        </div>`;
+      }).join('')||'<div style="font-size:.7rem;color:#555555;text-align:center;padding:14px">無</div>'}
     </div>
   </div>`;
   wrap.innerHTML=h;
