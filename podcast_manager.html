@@ -291,6 +291,8 @@ body{display:flex;flex-direction:column}
 .pop-btn{padding:4px 11px;border-radius:5px;border:1px solid #2a2a2a;background:transparent;color:#888888;font-size:.7rem;font-family:inherit;cursor:pointer;transition:all .15s}
 .pop-btn.save{border-color:#aaaaaa;color:#aaaaaa;background:#181818}
 .pop-btn.save:hover{background:#262626;color:#f0ece8}
+.pop-btn.undone{border-color:#5a3a00;color:#f0a030;background:#1c1200;margin-right:auto}
+.pop-btn.undone:hover{background:#2a1800;color:#f8c060;border-color:#f0a030}
 /* TOOLTIP */
 .tip{position:fixed;background:#161616;border:1px solid #444444;border-radius:8px;padding:8px 12px;font-size:.7rem;color:#f0ece8;z-index:500;pointer-events:none;opacity:0;transition:opacity .15s;max-width:200px;line-height:1.6}
 .tip.show{opacity:1}
@@ -682,6 +684,7 @@ body{display:flex;flex-direction:column}
   <div class="pop-row"><div class="pop-lbl">截止日</div><input class="pop-input" id="pop-due" type="date"></div>
   <div class="pop-row"><div class="pop-lbl">負責人</div><input class="pop-input" id="pop-assignee" placeholder="輸入姓名"></div>
   <div class="pop-btns">
+    <button class="pop-btn undone" id="pop-undone-btn" onclick="undonePop()" style="display:none">↩ 設為未完成</button>
     <button class="pop-btn" onclick="closePop()">關閉</button>
     <button class="pop-btn save" onclick="savePop()">儲存</button>
   </div>
@@ -1392,6 +1395,8 @@ function renderKanban(){
     let cards=S.eps.filter(ep=>{
       const all=S.pp.filter(p=>p.eid===ep.id);
       if(!all.length)return false;
+      // Reels（stage 5）完成 → 整集進「已完成」，不再出現在任何工作欄
+      if(all.find(p=>p.stage===5)?.done)return false;
       const cur=all.find(p=>p.stage===si);
       return stageUnlocked(all,si)&&cur&&!cur.done;
     });
@@ -1423,17 +1428,17 @@ function renderKanban(){
     </div>`;
   });
 
-  // Done col
-  const doneEps=S.pp.filter(p=>p.stage===5&&!!p.done).map(p=>S.eps.find(e=>e.id===p.eid)).filter(Boolean);
+  // Done col — Reels（stage 5）完成即視為整集完成
+  const donePairs=S.pp.filter(p=>p.stage===5&&!!p.done).map(p=>({rlPP:p,ep:S.eps.find(e=>e.id===p.eid)})).filter(x=>x.ep);
   h+=`<div class="k-col">
     <div class="k-col-accent" style="background:#444444"></div>
-    <div class="k-col-hdr"><span class="k-col-title" style="color:#aaaaaa">✅ 已完成</span><span class="k-count">${doneEps.length}</span></div>
+    <div class="k-col-hdr"><span class="k-col-title" style="color:#aaaaaa">✅ 已完成</span><span class="k-count">${donePairs.length}</span></div>
     <div class="k-cards">
-      ${doneEps.map(ep=>`<div class="k-card" style="opacity:.55">
+      ${donePairs.map(({rlPP,ep})=>`<div class="k-card" style="opacity:.6;cursor:pointer" onclick="openPop(event,'${rlPP.id}','${ep.epNumber}')" title="點擊可設為未完成">
         <div class="k-ep">${ep.epNumber}</div>
         <div class="k-topic">${ep.topic||''}</div>
         <div class="k-guest">${ep.guest||''}</div>
-        <div class="k-meta"><span style="font-size:.63rem;color:#aaaaaa;font-weight:700">✅ 已上架</span></div>
+        <div class="k-meta"><span style="font-size:.63rem;color:#aaaaaa;font-weight:700">✅ Reels 完成</span></div>
       </div>`).join('')||'<div style="font-size:.7rem;color:#555555;text-align:center;padding:14px">無</div>'}
     </div>
   </div>`;
@@ -1454,6 +1459,9 @@ function openPop(e,ppId,epNum){
   document.getElementById('pop-title').textContent=`${epNum} — ${st?.label||''}`;
   document.getElementById('pop-due').value=p?.due||'';
   document.getElementById('pop-assignee').value=p?.assignee||'';
+  // 已完成的工作顯示「設為未完成」按鈕
+  const undoneBtn=document.getElementById('pop-undone-btn');
+  if(undoneBtn)undoneBtn.style.display=p?.done?'':'none';
   const pop=document.getElementById('pop');
   const r=e.currentTarget.getBoundingClientRect();
   pop.style.left=Math.min(r.left,window.innerWidth-250)+'px';
@@ -1468,6 +1476,12 @@ function savePop(){
   if(document.getElementById('tab-calendar').classList.contains('active'))renderCal();
   if(document.getElementById('tab-gantt').classList.contains('active'))renderGantt();
   toast('已儲存');
+}
+function undonePop(){
+  const p=S.pp.find(x=>x.id===popPpId);if(!p)return;
+  pushHistory();p.done=null;save();closePop();renderKanban();renderSched();
+  if(document.getElementById('tab-calendar').classList.contains('active'))renderCal();
+  toast(`已取消完成：${STAGES[p.stage]?.label||''}`);
 }
 document.addEventListener('click',e=>{
   const pop=document.getElementById('pop');
