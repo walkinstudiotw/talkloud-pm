@@ -825,6 +825,19 @@ function initFirebase(){
     _db.ref('pp').on('value',snap=>{
       S.pp=snap.val()?Object.values(snap.val()).filter(Boolean):[];
     });
+  }).catch(err=>{
+    console.error('Firebase 讀取失敗：',err);
+    const el=document.getElementById('fb-status');
+    if(el){el.textContent='🔴';el.title='Firebase 連線失敗：'+err.message;}
+    // 顯示錯誤提示覆蓋層
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;inset:0;background:#0a0a0aee;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:inherit;color:#f0ece8;text-align:center;padding:30px';
+    overlay.innerHTML=`<div style="font-size:2rem">🔴</div>
+      <div style="font-size:1rem;font-weight:700">無法讀取資料庫</div>
+      <div style="font-size:.82rem;color:#aaa;max-width:340px;line-height:1.7">Firebase 安全性規則可能已到期（每 30 天需更新一次）。<br>請前往 Firebase Console 更新規則後重新整理頁面。</div>
+      <a href="https://console.firebase.google.com/project/talkloudpm/database/talkloudpm-default-rtdb/rules" target="_blank" style="padding:9px 22px;border-radius:8px;background:#1e6038;color:#4dd87a;font-size:.82rem;font-weight:700;text-decoration:none;border:1px solid #4dd87a">前往 Firebase Console →</a>
+      <div style="font-size:.7rem;color:#555">規則設為：<code style="color:#888">".read":true, ".write":true</code></div>`;
+    document.body.appendChild(overlay);
   });
 }
 
